@@ -13,6 +13,7 @@ void uploadLightUniform(FrameGraph& fg, FrameGraphBlackboard& blackboard, const 
             data.lightUniform = builder.write(data.lightUniform);
         },
         [=](const LightData& data, FrameGraphPassResources& resources, void* ctx) {
+            VGFW_PROFILE_NAMED_SCOPE("Upload Light Uniform");
             static_cast<vgfw::renderer::RenderContext*>(ctx)->upload(
                 vgfw::renderer::framegraph::getBuffer(resources, data.lightUniform),
                 0,

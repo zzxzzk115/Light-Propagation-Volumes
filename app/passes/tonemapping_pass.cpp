@@ -23,6 +23,8 @@ TonemappingPass::~TonemappingPass() { m_RenderContext.destroy(m_Pipeline); }
 
 FrameGraphResource TonemappingPass::addToGraph(FrameGraph& fg, FrameGraphResource input)
 {
+    VGFW_PROFILE_FUNCTION
+
     const auto extent = fg.getDescriptor<vgfw::renderer::framegraph::FrameGraphTexture>(input).extent;
 
     struct Data
@@ -30,7 +32,7 @@ FrameGraphResource TonemappingPass::addToGraph(FrameGraph& fg, FrameGraphResourc
         FrameGraphResource output;
     };
     const auto& pass = fg.addCallbackPass<Data>(
-        "Tone-Mapping Pass",
+        "Tone-mapping Pass",
         [&](FrameGraph::Builder& builder, Data& data) {
             builder.read(input);
 
@@ -39,6 +41,10 @@ FrameGraphResource TonemappingPass::addToGraph(FrameGraph& fg, FrameGraphResourc
             data.output = builder.write(data.output);
         },
         [=, this](const Data& data, FrameGraphPassResources& resources, void* ctx) {
+            NAMED_DEBUG_MARKER("Tone-mapping Pass");
+            VGFW_PROFILE_GL("Tone-mapping Pass");
+            VGFW_PROFILE_NAMED_SCOPE("Tone-mapping Pass");
+
             const vgfw::renderer::RenderingInfo renderingInfo {
                 .area             = {.extent = extent},
                 .colorAttachments = {{

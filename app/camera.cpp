@@ -12,6 +12,8 @@ void Camera::updateData(const std::shared_ptr<vgfw::window::Window>& window)
 
 void Camera::update(const std::shared_ptr<vgfw::window::Window>& window, float dt)
 {
+    VGFW_PROFILE_FUNCTION
+
     auto*         glfwWindow = reinterpret_cast<GLFWwindow*>(window->getPlatformWindow());
     static double lastX, lastY;
     static bool   first = true;

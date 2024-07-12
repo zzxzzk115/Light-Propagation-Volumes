@@ -8,9 +8,8 @@
 
 #include "pass_resource/scene_color_data.hpp"
 
-#include "passes/deferred_lighting_pass.hpp"
 #include "passes/final_composition_pass.hpp"
-#include "passes/gbuffer_pass.hpp"
+#include "passes/forward_lighting_pass.hpp"
 #include "passes/tonemapping_pass.hpp"
 
 int main()
@@ -55,8 +54,7 @@ int main()
     vgfw::time::TimePoint lastTime = vgfw::time::Clock::now();
 
     // Define render passes
-    GBufferPass          gBufferPass(rc);
-    DeferredLightingPass deferredLightingPass(rc);
+    ForwardLightingPass  forwardLightingPass(rc);
     TonemappingPass      tonemappingPass(rc);
     FinalCompositionPass finalCompositionPass(rc);
 
@@ -66,6 +64,8 @@ int main()
     // Main loop
     while (!window->shouldClose())
     {
+        VGFW_PROFILE_NAMED_SCOPE("Main loop");
+
         vgfw::time::TimePoint currentTime = vgfw::time::Clock::now();
         vgfw::time::Duration  deltaTime   = currentTime - lastTime;
         lastTime                          = currentTime;
@@ -82,13 +82,10 @@ int main()
         uploadCameraUniform(fg, blackboard, camera.data);
         uploadLightUniform(fg, blackboard, light);
 
-        // GBuffer pass
-        gBufferPass.addToGraph(
-            fg, blackboard, {.width = window->getWidth(), .height = window->getHeight()}, sponza.meshPrimitives);
-
-        // Deferred Lighting pass
+        // Forward Lighting pass
         auto& sceneColor = blackboard.add<SceneColorData>();
-        sceneColor.hdr   = deferredLightingPass.addToGraph(fg, blackboard);
+        sceneColor.hdr   = forwardLightingPass.addToGraph(
+            fg, blackboard, {.width = window->getWidth(), .height = window->getHeight()}, sponza.meshPrimitives);
 
         // Tone-mapping pass
         sceneColor.ldr = tonemappingPass.addToGraph(fg, sceneColor.hdr);
@@ -96,37 +93,50 @@ int main()
         // Final composition pass
         finalCompositionPass.compose(fg, blackboard, renderTarget);
 
-        fg.compile();
+        {
+            VGFW_PROFILE_NAMED_SCOPE("Compile FrameGraph");
+            fg.compile();
+        }
 
         vgfw::renderer::beginFrame();
 
-        fg.execute(&rc, &transientResources);
+        {
+            VGFW_PROFILE_NAMED_SCOPE("Execute FrameGraph");
+            fg.execute(&rc, &transientResources);
+        }
 
 #ifndef NDEBUG
-        // Built in graphviz writer.
-        std::ofstream {"DebugFrameGraph.dot"} << fg;
+        {
+            VGFW_PROFILE_NAMED_SCOPE("Export FrameGraph");
+            // Built in graphviz writer.
+            std::ofstream {"DebugFrameGraph.dot"} << fg;
+        }
 #endif
 
         transientResources.update(dt);
 
-        ImGui::Begin("Deferred (Naive) with FrameGraph");
-        ImGui::SliderFloat("Camera FOV", &camera.fov, 1.0f, 179.0f);
-        ImGui::Text("Press CAPSLOCK to toggle the camera (W/A/S/D/Q/E + Mouse)");
-
-        const char* comboItems[] = {
-            "Final", "GPosition", "GNormal", "GAlbedo", "GEmissive", "GMetallicRoughnessAO", "SceneColorHDR"};
-
-        int currentItem = static_cast<int>(renderTarget);
-
-        if (ImGui::Combo("Render Target", &currentItem, comboItems, IM_ARRAYSIZE(comboItems)))
         {
-            renderTarget = static_cast<RenderTarget>(currentItem);
+            VGFW_PROFILE_NAMED_SCOPE("ImGui");
+            ImGui::Begin("Render settings");
+            ImGui::SliderFloat("Camera FOV", &camera.fov, 1.0f, 179.0f);
+            ImGui::Text("Press CAPSLOCK to toggle the camera (W/A/S/D/Q/E + Mouse)");
+
+            const char* comboItems[] = {"Final", "SceneColorHDR"};
+
+            int currentItem = static_cast<int>(renderTarget);
+
+            if (ImGui::Combo("Render Target", &currentItem, comboItems, IM_ARRAYSIZE(comboItems)))
+            {
+                renderTarget = static_cast<RenderTarget>(currentItem);
+            }
+            ImGui::End();
         }
-        ImGui::End();
 
         vgfw::renderer::endFrame();
 
         vgfw::renderer::present();
+
+        VGFW_PROFILE_END_OF_FRAME
     }
 
     // Cleanup

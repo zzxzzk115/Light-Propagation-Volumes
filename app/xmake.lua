@@ -1,4 +1,5 @@
 add_requires("shaderc", {configs = {binaryonly = true}})
+add_requires("tracy")
 
 -- target defination, name: lpv-app
 target("lpv-app")
@@ -25,7 +26,10 @@ target("lpv-app")
     add_deps("vgfw")
 
     -- add packages
-    add_packages("shaderc")
+    add_packages("shaderc", "tracy")
+
+    -- add defines
+    add_defines("VGFW_ENABLE_TRACY", "VGFW_ENABLE_GL_DEBUG")
 
     -- set target directory
     set_targetdir("$(buildir)/$(plat)/$(arch)/$(mode)/lpv-app")
