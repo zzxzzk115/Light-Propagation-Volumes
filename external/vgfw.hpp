@@ -2,7 +2,7 @@
  * @file vgfw.hpp
  * @author Kexuan Zhang (zzxzzk115@gmail.com)
  * @brief VGFW (V Graphics FrameWork) is a library designed for rapidly creating graphics prototypes.
- * @version 1.0.0
+ * @version 1.1.0
  *
  * @copyright Copyright (c) 2024
  *
@@ -27,15 +27,16 @@
 #include <stdexcept>
 #endif
 
-// Currently, we only support Windows, Linux and macOS.
+// Currently, we only support Windows & Linux (DSA is not available on macOS (GL 4.1))
 
 #define VGFW_PLATFORM_DARWIN 0
 #define VGFW_PLATFORM_LINUX 0
 #define VGFW_PLATFORM_WINDOWS 0
 
-#if defined(__APPLE__) && defined(__MACH__)
-#undef VGFW_PLATFORM_DARWIN
-#define VGFW_PLATFORM_DARWIN 1
+#if defined(__APPLE__) && defined(__MACH__) // TODO: Support non-DSA
+// #undef VGFW_PLATFORM_DARWIN
+// #define VGFW_PLATFORM_DARWIN 1
+#error "macOS is not supported in version 1.0.0"
 #elif defined(__linux__)
 #undef VGFW_PLATFORM_LINUX
 #define VGFW_PLATFORM_LINUX 1
@@ -1242,7 +1243,10 @@ namespace vgfw
                             renderer::Texture&           texture,
                             renderer::RenderContext&     rc);
 
-        bool load(const std::filesystem::path& modelPath, resource::Model& model, renderer::RenderContext& rc);
+        bool loadModel(const std::filesystem::path& modelPath,
+                       resource::Model&             model,
+                       renderer::RenderContext&     rc,
+                       const glm::vec3&             scale = glm::vec3(1.0f));
     } // namespace io
 
     bool init();
@@ -4026,7 +4030,7 @@ namespace vgfw
         bool loadModel(const std::filesystem::path& modelPath,
                        resource::Model&             model,
                        renderer::RenderContext&     rc,
-                       const glm::vec3&             scale = glm::vec3(1.0f))
+                       const glm::vec3&             scale)
         {
             const auto& ext = modelPath.extension();
             if (ext == ".obj")
