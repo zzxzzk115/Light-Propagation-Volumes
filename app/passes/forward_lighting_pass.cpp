@@ -17,6 +17,7 @@ ForwardLightingPass::~ForwardLightingPass()
 FrameGraphResource ForwardLightingPass::addToGraph(FrameGraph&                                       fg,
                                                    FrameGraphBlackboard&                             blackboard,
                                                    const vgfw::renderer::Extent2D&                   resolution,
+                                                   const Camera&                                     camera,
                                                    const std::vector<vgfw::resource::MeshPrimitive>& meshPrimitives)
 {
     VGFW_PROFILE_FUNCTION
@@ -44,7 +45,7 @@ FrameGraphResource ForwardLightingPass::addToGraph(FrameGraph&                  
                 "Depth", {.extent = resolution, .format = vgfw::renderer::PixelFormat::eDepth24});
             data.depth = builder.write(data.depth);
         },
-        [=, &meshPrimitives, this](const Data& data, FrameGraphPassResources& resources, void* ctx) {
+        [=, &meshPrimitives, &camera, this](const Data& data, FrameGraphPassResources& resources, void* ctx) {
             NAMED_DEBUG_MARKER("Forward Lighting Pass");
             VGFW_PROFILE_GL("Forward Lighting Pass");
             VGFW_PROFILE_NAMED_SCOPE("Forward Lighting Pass");
@@ -71,6 +72,8 @@ FrameGraphResource ForwardLightingPass::addToGraph(FrameGraph&                  
             for (const auto& meshPrimitive : meshPrimitives)
             {
                 rc.bindGraphicsPipeline(getPipeline(*meshPrimitive.vertexFormat))
+                    .setUniformMat4("uTransform.model", meshPrimitive.modelMatrix)
+                    .setUniformMat4("uTransform.viewProjection", camera.data.projection * camera.data.view)
                     .bindUniformBuffer(0, vgfw::renderer::framegraph::getBuffer(resources, cameraUniform))
                     .bindUniformBuffer(1, vgfw::renderer::framegraph::getBuffer(resources, lightUniform))
                     .bindMeshPrimitiveMaterialBuffer(2, meshPrimitive)

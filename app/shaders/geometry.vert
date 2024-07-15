@@ -9,15 +9,17 @@ layout(location = 0) out vec2 vTexCoords;
 layout(location = 1) out vec3 vFragPos;
 layout(location = 2) out mat3 vTBN;
 
-layout(binding = 0) uniform Camera {
-    vec3 position;
-    mat4 view;
-    mat4 projection;
-} uCamera;
+struct Transform {
+    mat4 model;
+    mat4 viewProjection;
+};
+
+uniform Transform uTransform;
 
 void main() {
-    gl_Position = uCamera.projection * uCamera.view * vec4(aPos, 1.0);
+    vec4 fragPos = uTransform.model * vec4(aPos, 1.0);
+    vFragPos = fragPos.xyz;
     vTexCoords = aTexCoords;
-    vFragPos = aPos;
     vTBN = mat3(aTangent.xyz, cross(aTangent.xyz, aNormal) * aTangent.w, aNormal);
+    gl_Position = uTransform.viewProjection * fragPos;
 }

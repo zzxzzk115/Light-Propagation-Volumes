@@ -1,6 +1,7 @@
 #pragma once
 
 #include "base_pass.hpp"
+#include "camera.hpp"
 
 class ForwardLightingPass : public BasePass
 {
@@ -11,6 +12,7 @@ public:
     FrameGraphResource addToGraph(FrameGraph&                                       fg,
                                   FrameGraphBlackboard&                             blackboard,
                                   const vgfw::renderer::Extent2D&                   resolution,
+                                  const Camera&                                     camera,
                                   const std::vector<vgfw::resource::MeshPrimitive>& meshPrimitives);
 
 private:

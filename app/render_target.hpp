@@ -4,4 +4,7 @@ enum class RenderTarget
 {
     eFinal = 0,
     eSceneColorHDR,
+    eRSMPosition,
+    eRSMNormal,
+    eRSMFlux,
 };

@@ -1,4 +1,5 @@
 #include "passes/final_composition_pass.hpp"
+#include "pass_resource/reflective_shadow_map_data.hpp"
 #include "pass_resource/scene_color_data.hpp"
 
 FinalCompositionPass::FinalCompositionPass(vgfw::renderer::RenderContext& rc) : BasePass(rc)
@@ -36,6 +37,18 @@ void FinalCompositionPass::compose(FrameGraph& fg, FrameGraphBlackboard& blackbo
 
         case RenderTarget::eSceneColorHDR:
             output = blackboard.get<SceneColorData>().hdr;
+            break;
+
+        case RenderTarget::eRSMPosition:
+            output = blackboard.get<ReflectiveShadowMapData>().position;
+            break;
+
+        case RenderTarget::eRSMNormal:
+            output = blackboard.get<ReflectiveShadowMapData>().normal;
+            break;
+
+        case RenderTarget::eRSMFlux:
+            output = blackboard.get<ReflectiveShadowMapData>().flux;
             break;
     }
 

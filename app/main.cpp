@@ -10,7 +10,10 @@
 
 #include "passes/final_composition_pass.hpp"
 #include "passes/forward_lighting_pass.hpp"
+#include "passes/reflective_shadow_map_pass.hpp"
 #include "passes/tonemapping_pass.hpp"
+
+#include "lpv_config.hpp"
 
 int main()
 {
@@ -35,17 +38,18 @@ int main()
 
     // Load model
     vgfw::resource::Model sponza {};
-    if (!vgfw::io::load("assets/models/Sponza/glTF/Sponza.gltf", sponza, rc))
+    if (!vgfw::io::loadModel("assets/models/Sponza/glTF/Sponza.gltf", sponza, rc, glm::vec3(0.035f)))
     {
         return -1;
     }
 
     DirectionalLight light {};
+    light.direction = {-0.551486731f, -0.827472687f, 0.105599940f};
 
     // Camera properties
     Camera camera {};
-    camera.data.position = {-1150, 200, -45};
-    camera.yaw           = 90.0f;
+    camera.data.position = {35, 7, -1.5};
+    camera.yaw           = -90.0f;
     camera.updateData(window);
 
     // Create a texture sampler
@@ -54,9 +58,10 @@ int main()
     vgfw::time::TimePoint lastTime = vgfw::time::Clock::now();
 
     // Define render passes
-    ForwardLightingPass  forwardLightingPass(rc);
-    TonemappingPass      tonemappingPass(rc);
-    FinalCompositionPass finalCompositionPass(rc);
+    ReflectiveShadowMapPass rsmPass(rc);
+    ForwardLightingPass     forwardLightingPass(rc);
+    TonemappingPass         tonemappingPass(rc);
+    FinalCompositionPass    finalCompositionPass(rc);
 
     // Define render target
     RenderTarget renderTarget = RenderTarget::eFinal;
@@ -82,10 +87,26 @@ int main()
         uploadCameraUniform(fg, blackboard, camera.data);
         uploadLightUniform(fg, blackboard, light);
 
+        // Build RSM cascade
+        auto rsmCascade = vgfw::renderer::shadow::buildCascades(camera.zNear,
+                                                                camera.zFar,
+                                                                camera.data.projection * camera.data.view,
+                                                                light.direction,
+                                                                1,
+                                                                1,
+                                                                kRSMResolution);
+        auto rsmLightVP = rsmCascade[0].viewProjection;
+
+        // RSM pass
+        rsmPass.addToGraph(fg, blackboard, rsmLightVP, sponza.meshPrimitives);
+
         // Forward Lighting pass
         auto& sceneColor = blackboard.add<SceneColorData>();
-        sceneColor.hdr   = forwardLightingPass.addToGraph(
-            fg, blackboard, {.width = window->getWidth(), .height = window->getHeight()}, sponza.meshPrimitives);
+        sceneColor.hdr   = forwardLightingPass.addToGraph(fg,
+                                                        blackboard,
+                                                          {.width = window->getWidth(), .height = window->getHeight()},
+                                                        camera,
+                                                        sponza.meshPrimitives);
 
         // Tone-mapping pass
         sceneColor.ldr = tonemappingPass.addToGraph(fg, sceneColor.hdr);
@@ -121,7 +142,7 @@ int main()
             ImGui::SliderFloat("Camera FOV", &camera.fov, 1.0f, 179.0f);
             ImGui::Text("Press CAPSLOCK to toggle the camera (W/A/S/D/Q/E + Mouse)");
 
-            const char* comboItems[] = {"Final", "SceneColorHDR"};
+            const char* comboItems[] = {"Final", "SceneColorHDR", "RSMPosition", "RSMNormal", "RSMFlux"};
 
             int currentItem = static_cast<int>(renderTarget);
 
