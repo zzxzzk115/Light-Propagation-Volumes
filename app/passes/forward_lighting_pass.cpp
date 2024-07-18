@@ -1,8 +1,7 @@
 #include "passes/forward_lighting_pass.hpp"
-#include "FrameGraphResource.hpp"
 #include "pass_resource/camera_data.hpp"
 #include "pass_resource/light_data.hpp"
-#include "vgfw.hpp"
+#include "pass_resource/radiance_data.hpp"
 
 ForwardLightingPass::ForwardLightingPass(vgfw::renderer::RenderContext& rc) : BasePass(rc) {}
 
@@ -18,12 +17,15 @@ FrameGraphResource ForwardLightingPass::addToGraph(FrameGraph&                  
                                                    FrameGraphBlackboard&                             blackboard,
                                                    const vgfw::renderer::Extent2D&                   resolution,
                                                    const Camera&                                     camera,
-                                                   const std::vector<vgfw::resource::MeshPrimitive>& meshPrimitives)
+                                                   const std::vector<vgfw::resource::MeshPrimitive>& meshPrimitives,
+                                                   const Grid3D&                                     grid,
+                                                   VisualMode                                        visualMode)
 {
     VGFW_PROFILE_FUNCTION
 
     const auto [cameraUniform] = blackboard.get<CameraData>();
     const auto [lightUniform]  = blackboard.get<LightData>();
+    const auto radianceData    = blackboard.get<RadianceData>();
 
     struct Data
     {
@@ -37,8 +39,12 @@ FrameGraphResource ForwardLightingPass::addToGraph(FrameGraph&                  
             builder.read(cameraUniform);
             builder.read(lightUniform);
 
+            builder.read(radianceData.r);
+            builder.read(radianceData.g);
+            builder.read(radianceData.b);
+
             data.sceneColorHDR = builder.create<vgfw::renderer::framegraph::FrameGraphTexture>(
-                "SceneColorHDR", {.extent = resolution, .format = vgfw::renderer::PixelFormat::eRGB8_UNorm});
+                "SceneColorHDR", {.extent = resolution, .format = vgfw::renderer::PixelFormat::eRGB16F});
             data.sceneColorHDR = builder.write(data.sceneColorHDR);
 
             data.depth = builder.create<vgfw::renderer::framegraph::FrameGraphTexture>(
@@ -74,10 +80,17 @@ FrameGraphResource ForwardLightingPass::addToGraph(FrameGraph&                  
                 rc.bindGraphicsPipeline(getPipeline(*meshPrimitive.vertexFormat))
                     .setUniformMat4("uTransform.model", meshPrimitive.modelMatrix)
                     .setUniformMat4("uTransform.viewProjection", camera.data.projection * camera.data.view)
+                    .setUniform1ui("uVisualMode", static_cast<uint32_t>(visualMode))
+                    .setUniformVec3("uInjection.gridAABBMin", grid.aabb.min)
+                    .setUniformVec3("uInjection.gridSize", grid.size)
+                    .setUniform1f("uInjection.gridCellSize", grid.cellSize)
                     .bindUniformBuffer(0, vgfw::renderer::framegraph::getBuffer(resources, cameraUniform))
                     .bindUniformBuffer(1, vgfw::renderer::framegraph::getBuffer(resources, lightUniform))
                     .bindMeshPrimitiveMaterialBuffer(2, meshPrimitive)
-                    .bindMeshPrimitiveTextures(0, meshPrimitive)
+                    .bindTexture(0, vgfw::renderer::framegraph::getTexture(resources, radianceData.r))
+                    .bindTexture(1, vgfw::renderer::framegraph::getTexture(resources, radianceData.g))
+                    .bindTexture(2, vgfw::renderer::framegraph::getTexture(resources, radianceData.b))
+                    .bindMeshPrimitiveTextures(3, meshPrimitive)
                     .drawMeshPrimitive(meshPrimitive);
             }
 

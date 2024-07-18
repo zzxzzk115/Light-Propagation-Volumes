@@ -1,6 +1,7 @@
-#version 450
+#version 460 core
 
 #include "lib/pbr.glsl"
+#include "lib/lpv.glsl"
 
 layout(location = 0) in vec2 vTexCoords;
 layout(location = 1) in vec3 vFragPos;
@@ -28,13 +29,19 @@ layout(binding = 2) uniform PrimitiveMaterial {
     int emissiveTextureIndex;
 } uMaterial;
 
-layout(binding = 0) uniform sampler2D pbrTextures[5];
+layout(binding = 0) uniform sampler3D Propagated_SH_R;
+layout(binding = 1) uniform sampler3D Propagated_SH_G;
+layout(binding = 2) uniform sampler3D Propagated_SH_B;
+layout(binding = 3) uniform sampler2D PBR_Textures[5];
+
+uniform uint uVisualMode;
+uniform RadianceInjection uInjection;
 
 void main() {
     vec3 baseColor;
     float alpha = 1.0;
     if(uMaterial.baseColorTextureIndex != -1) {
-        vec4 color = texture(pbrTextures[uMaterial.baseColorTextureIndex], vTexCoords);
+        vec4 color = texture(PBR_Textures[uMaterial.baseColorTextureIndex], vTexCoords);
         baseColor = color.rgb;
         alpha = color.a;
     }
@@ -46,49 +53,79 @@ void main() {
     float metallic = 0.0;
     float roughness = 0.5;
     if(uMaterial.metallicRoughnessTextureIndex != -1) {
-        vec4 metallicRoughness = texture(pbrTextures[uMaterial.metallicRoughnessTextureIndex], vTexCoords);
+        vec4 metallicRoughness = texture(PBR_Textures[uMaterial.metallicRoughnessTextureIndex], vTexCoords);
         metallic = metallicRoughness.b;
         roughness = metallicRoughness.g;
     }
 
     vec3 normal = normalize(vTBN[2]);
     if(uMaterial.normalTextureIndex != -1) {
-        vec3 normalColor = texture(pbrTextures[uMaterial.normalTextureIndex], vTexCoords).rgb;
+        vec3 normalColor = texture(PBR_Textures[uMaterial.normalTextureIndex], vTexCoords).rgb;
         vec3 tangentNormal = normalColor * 2.0 - 1.0;
         normal = tangentNormal * transpose(vTBN);
     }
 
     float ao = 1.0;
     if(uMaterial.occlusionTextureIndex != -1) {
-        ao = texture(pbrTextures[uMaterial.occlusionTextureIndex], vTexCoords).r;
+        ao = texture(PBR_Textures[uMaterial.occlusionTextureIndex], vTexCoords).r;
     }
 
     vec3 emissive;
     if(uMaterial.emissiveTextureIndex != -1) {
-        emissive = texture(pbrTextures[uMaterial.emissiveTextureIndex], vTexCoords).rgb;
+        emissive = texture(PBR_Textures[uMaterial.emissiveTextureIndex], vTexCoords).rgb;
     }
 
-    float lightIntensity = uLight.intensity;
-    vec3 lightColor = uLight.color;
-    vec3 lightDir = -uLight.direction;
+    vec3 V = normalize(uCamera.position - vFragPos);
+    vec3 N = normal;
+    vec3 L = normalize(-uLight.direction);
+    vec3 H = normalize(V + L);
+    vec3 lightRadiance = uLight.color * uLight.intensity;
 
-    // Ambient
-    vec3 ambient = lightIntensity * lightColor * 0.02;
+    vec3 F0 = vec3(0.04);
+    F0 = mix(F0, baseColor, metallic);
 
-    // Diffuse
-    float diff = max(dot(normal, lightDir), 0.0);
-    vec3 diffuse = lightIntensity * diff * lightColor;
+    // cook-torrance brdf
+    float gamma = 2.0;
+    float NDF = DistributionGTR(N, H, roughness, gamma);
+    float G = GeometrySmith(N, V, L, roughness);
+    vec3 F = FresnelSchlick(max(dot(H, V), 0.0), F0);
 
-    // Specular (Cook-Torrance BRDF)
-    vec3 viewDir = normalize(uCamera.position - vFragPos);
-    vec3 halfwayDir = normalize(lightDir + viewDir);
+    vec3 kS = F;
+    vec3 kD = vec3(1.0) - kS;
+    kD *= 1.0 - metallic;
 
-    float NDF = DistributionGGX(normal, halfwayDir, roughness);
-    float G = GeometrySmith(normal, viewDir, lightDir, roughness);
-    vec3 F0 = vec3(0.04); // default specular reflectance
-    vec3 F = FresnelSchlick(max(dot(halfwayDir, viewDir), 0.0), F0);
-    vec3 specular = (NDF * G * F) / (4.0 * max(dot(normal, viewDir), 0.0) * max(dot(normal, lightDir), 0.0));
+    vec3 nominator = NDF * G * F;
+    float denominator = 4.0 * max(dot(N, V), 0.0) * max(dot(N, L), 0.0) + 1e-12;
+    vec3 specular = nominator / denominator;
 
-    // Combine ambient, diffuse, and specular components
-    FragColor = (ambient + (1.0 - metallic) * diffuse + metallic * specular) * baseColor * ao + emissive;
+    float NdotL = max(dot(N, L), 0.0);
+
+    // Direct light
+    vec3 Lo_Diffuse = kD * baseColor / PI * lightRadiance * NdotL;
+    vec3 Lo_Specular = specular * lightRadiance * NdotL;
+
+    // Indirect light (LPV-based GI)
+    const vec3 cellCoords = (vFragPos - uInjection.gridAABBMin) / uInjection.gridCellSize / uInjection.gridSize;
+
+    // clang-format off
+    const SH_Coefficients coeffs = {
+        texture(Propagated_SH_R, cellCoords, 0),
+        texture(Propagated_SH_G, cellCoords, 0),
+        texture(Propagated_SH_B, cellCoords, 0),
+    };
+    // clang-format on
+
+    const vec4 SH_Intensity = SH_Evaluate(-normal);
+    const vec3 LPV_Intensity = vec3(dot(SH_Intensity, coeffs.red), dot(SH_Intensity, coeffs.green), dot(SH_Intensity, coeffs.blue));
+
+    const vec3 radiance = max(LPV_Intensity * 4 / uInjection.gridCellSize / uInjection.gridCellSize, 0.0);
+    if(uVisualMode != 1) {
+        Lo_Diffuse += baseColor * radiance * ao;
+    }
+
+    if(uVisualMode != 2) {
+        FragColor = Lo_Diffuse + Lo_Specular + emissive;
+    } else {
+        FragColor = radiance;
+    }
 }

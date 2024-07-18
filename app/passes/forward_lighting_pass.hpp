@@ -2,6 +2,8 @@
 
 #include "base_pass.hpp"
 #include "camera.hpp"
+#include "grid3d.hpp"
+#include "visual_mode.hpp"
 
 class ForwardLightingPass : public BasePass
 {
@@ -13,7 +15,9 @@ public:
                                   FrameGraphBlackboard&                             blackboard,
                                   const vgfw::renderer::Extent2D&                   resolution,
                                   const Camera&                                     camera,
-                                  const std::vector<vgfw::resource::MeshPrimitive>& meshPrimitives);
+                                  const std::vector<vgfw::resource::MeshPrimitive>& meshPrimitives,
+                                  const Grid3D&                                     grid,
+                                  VisualMode                                        visualMode);
 
 private:
     vgfw::renderer::GraphicsPipeline& getPipeline(const vgfw::renderer::VertexFormat&);

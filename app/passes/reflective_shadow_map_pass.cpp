@@ -36,7 +36,7 @@ void ReflectiveShadowMapPass::addToGraph(FrameGraph&                            
                 {
                     .extent = kExtent,
                     .format = vgfw::renderer::PixelFormat::eRGB16F,
-                    .wrap   = vgfw::renderer::WrapMode::eClampToOpaqueBlack,
+                    .wrapMode   = vgfw::renderer::WrapMode::eClampToOpaqueBlack,
                     .filter = vgfw::renderer::TexelFilter::eNearest,
                 });
             data.normal = builder.create<vgfw::renderer::framegraph::FrameGraphTexture>(
@@ -44,7 +44,7 @@ void ReflectiveShadowMapPass::addToGraph(FrameGraph&                            
                 {
                     .extent = kExtent,
                     .format = vgfw::renderer::PixelFormat::eRGB16F,
-                    .wrap   = vgfw::renderer::WrapMode::eClampToOpaqueBlack,
+                    .wrapMode   = vgfw::renderer::WrapMode::eClampToOpaqueBlack,
                     .filter = vgfw::renderer::TexelFilter::eNearest,
                 });
             data.flux = builder.create<vgfw::renderer::framegraph::FrameGraphTexture>(
@@ -52,7 +52,7 @@ void ReflectiveShadowMapPass::addToGraph(FrameGraph&                            
                 {
                     .extent = kExtent,
                     .format = vgfw::renderer::PixelFormat::eRGB16F,
-                    .wrap   = vgfw::renderer::WrapMode::eClampToOpaqueBlack,
+                    .wrapMode   = vgfw::renderer::WrapMode::eClampToOpaqueBlack,
                     .filter = vgfw::renderer::TexelFilter::eNearest,
                 });
 

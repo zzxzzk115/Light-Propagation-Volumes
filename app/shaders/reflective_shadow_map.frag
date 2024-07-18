@@ -1,4 +1,4 @@
-#version 450
+#version 460 core
 
 #include "lib/pbr.glsl"
 
@@ -24,13 +24,13 @@ layout(binding = 2) uniform PrimitiveMaterial {
     int emissiveTextureIndex;
 } uMaterial;
 
-layout(binding = 0) uniform sampler2D pbrTextures[5];
+layout(binding = 0) uniform sampler2D PBR_Textures[5];
 
 void main() {
     vec3 baseColor = vec3(0);
     float alpha = 1.0;
     if(uMaterial.baseColorTextureIndex != -1) {
-        vec4 color = texture(pbrTextures[uMaterial.baseColorTextureIndex], vTexCoords);
+        vec4 color = texture(PBR_Textures[uMaterial.baseColorTextureIndex], vTexCoords);
         baseColor = color.rgb;
         alpha = color.a;
     }
@@ -42,26 +42,26 @@ void main() {
     float metallic = 0.0;
     float roughness = 0.5;
     if(uMaterial.metallicRoughnessTextureIndex != -1) {
-        vec4 metallicRoughness = texture(pbrTextures[uMaterial.metallicRoughnessTextureIndex], vTexCoords);
+        vec4 metallicRoughness = texture(PBR_Textures[uMaterial.metallicRoughnessTextureIndex], vTexCoords);
         metallic = metallicRoughness.b;
         roughness = metallicRoughness.g;
     }
 
     vec3 normal = normalize(vTBN[2]);
     if(uMaterial.normalTextureIndex != -1) {
-        vec3 normalColor = texture(pbrTextures[uMaterial.normalTextureIndex], vTexCoords).rgb;
+        vec3 normalColor = texture(PBR_Textures[uMaterial.normalTextureIndex], vTexCoords).rgb;
         vec3 tangentNormal = normalColor * 2.0 - 1.0;
         normal = tangentNormal * transpose(vTBN);
     }
 
     float ao = 1.0;
     if(uMaterial.occlusionTextureIndex != -1) {
-        ao = texture(pbrTextures[uMaterial.occlusionTextureIndex], vTexCoords).r;
+        ao = texture(PBR_Textures[uMaterial.occlusionTextureIndex], vTexCoords).r;
     }
 
     vec3 emissive = vec3(0);
     if(uMaterial.emissiveTextureIndex != -1) {
-        emissive = texture(pbrTextures[uMaterial.emissiveTextureIndex], vTexCoords).rgb;
+        emissive = texture(PBR_Textures[uMaterial.emissiveTextureIndex], vTexCoords).rgb;
     }
 
     RSMPosition = vFragPos;

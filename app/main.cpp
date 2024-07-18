@@ -6,14 +6,20 @@
 #include "uniforms/camera_uniform.hpp"
 #include "uniforms/light_uniform.hpp"
 
+#include "pass_resource/radiance_data.hpp"
+#include "pass_resource/reflective_shadow_map_data.hpp"
 #include "pass_resource/scene_color_data.hpp"
 
 #include "passes/final_composition_pass.hpp"
 #include "passes/forward_lighting_pass.hpp"
+#include "passes/radiance_injection_pass.hpp"
+#include "passes/radiance_propagation_pass.hpp"
 #include "passes/reflective_shadow_map_pass.hpp"
 #include "passes/tonemapping_pass.hpp"
 
+#include "grid3d.hpp"
 #include "lpv_config.hpp"
+#include "visual_mode.hpp"
 
 int main()
 {
@@ -44,7 +50,8 @@ int main()
     }
 
     DirectionalLight light {};
-    light.direction = {-0.551486731f, -0.827472687f, 0.105599940f};
+    light.direction = {0.000, -0.951, 0.308};
+    light.intensity = 3.0f;
 
     // Camera properties
     Camera camera {};
@@ -59,12 +66,21 @@ int main()
 
     // Define render passes
     ReflectiveShadowMapPass rsmPass(rc);
+    RadianceInjectionPass   radianceInjectionPass(rc);
+    RadiancePropagationPass radiancePropagationPass(rc);
     ForwardLightingPass     forwardLightingPass(rc);
     TonemappingPass         tonemappingPass(rc);
     FinalCompositionPass    finalCompositionPass(rc);
 
     // Define render target
     RenderTarget renderTarget = RenderTarget::eFinal;
+
+    // Get scene grid
+    Grid3D sceneGrid {sponza.aabb};
+
+    // UI properties
+    VisualMode visualMode   = VisualMode::eDefault;
+    int        lpvIteration = 6;
 
     // Main loop
     while (!window->shouldClose())
@@ -100,13 +116,26 @@ int main()
         // RSM pass
         rsmPass.addToGraph(fg, blackboard, rsmLightVP, sponza.meshPrimitives);
 
+        // Radiance Injection Pass
+        auto rsmData      = blackboard.get<ReflectiveShadowMapData>();
+        auto radianceData = radianceInjectionPass.addToGraph(fg, rsmData, sceneGrid);
+
+        // Radiance Propagation Pass
+        std::optional<RadianceData> propagatedRadiance;
+        for (auto i = 0; i < lpvIteration; ++i)
+            propagatedRadiance = radiancePropagationPass.addToGraph(
+                fg, propagatedRadiance ? *propagatedRadiance : radianceData, sceneGrid, i);
+        blackboard.add<RadianceData>(*propagatedRadiance);
+
         // Forward Lighting pass
         auto& sceneColor = blackboard.add<SceneColorData>();
         sceneColor.hdr   = forwardLightingPass.addToGraph(fg,
                                                         blackboard,
                                                           {.width = window->getWidth(), .height = window->getHeight()},
                                                         camera,
-                                                        sponza.meshPrimitives);
+                                                        sponza.meshPrimitives,
+                                                        sceneGrid,
+                                                        visualMode);
 
         // Tone-mapping pass
         sceneColor.ldr = tonemappingPass.addToGraph(fg, sceneColor.hdr);
@@ -142,14 +171,40 @@ int main()
             ImGui::SliderFloat("Camera FOV", &camera.fov, 1.0f, 179.0f);
             ImGui::Text("Press CAPSLOCK to toggle the camera (W/A/S/D/Q/E + Mouse)");
 
-            const char* comboItems[] = {"Final", "SceneColorHDR", "RSMPosition", "RSMNormal", "RSMFlux"};
+            ImGui::DragFloat3("Light Direction", glm::value_ptr(light.direction), 0.01f);
+            ImGui::DragFloat("Light Intensity", &light.intensity, 0.5f, 0.0f, 100.0f);
+            ImGui::ColorEdit3("Light Color", glm::value_ptr(light.color));
 
-            int currentItem = static_cast<int>(renderTarget);
+            ImGui::SliderInt("LPV Iteration", &lpvIteration, 1, 50);
 
-            if (ImGui::Combo("Render Target", &currentItem, comboItems, IM_ARRAYSIZE(comboItems)))
+            const char* visualModeItems[] = {
+                "Default",
+                "OnlyDirect",
+                "OnlyLPV",
+            };
+
+            int currentVisualMode = static_cast<int>(visualMode);
+
+            if (ImGui::Combo("Visual Mode", &currentVisualMode, visualModeItems, IM_ARRAYSIZE(visualModeItems)))
             {
-                renderTarget = static_cast<RenderTarget>(currentItem);
+                visualMode = static_cast<VisualMode>(currentVisualMode);
             }
+
+            const char* renderTargetItems[] = {
+                "Final",
+                "RSMPosition",
+                "RSMNormal",
+                "RSMFlux",
+                "SceneColorHDR",
+            };
+
+            int currentRenderTarget = static_cast<int>(renderTarget);
+
+            if (ImGui::Combo("Render Target", &currentRenderTarget, renderTargetItems, IM_ARRAYSIZE(renderTargetItems)))
+            {
+                renderTarget = static_cast<RenderTarget>(currentRenderTarget);
+            }
+
             ImGui::End();
         }
 
