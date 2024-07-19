@@ -1,4 +1,5 @@
 #include "passes/final_composition_pass.hpp"
+#include "pass_resource/gbuffer_data.hpp"
 #include "pass_resource/reflective_shadow_map_data.hpp"
 #include "pass_resource/scene_color_data.hpp"
 
@@ -49,6 +50,26 @@ void FinalCompositionPass::compose(FrameGraph& fg, FrameGraphBlackboard& blackbo
 
         case RenderTarget::eRSMFlux:
             output = blackboard.get<ReflectiveShadowMapData>().flux;
+            break;
+
+        case RenderTarget::eGPosition:
+            output = blackboard.get<GBufferData>().position;
+            break;
+
+        case RenderTarget::eGNormal:
+            output = blackboard.get<GBufferData>().normal;
+            break;
+
+        case RenderTarget::eGAlbedo:
+            output = blackboard.get<GBufferData>().albedo;
+            break;
+
+        case RenderTarget::eGEmissive:
+            output = blackboard.get<GBufferData>().emissive;
+            break;
+
+        case RenderTarget::eGMetallicRoughnessAO:
+            output = blackboard.get<GBufferData>().metallicRoughnessAO;
             break;
     }
 

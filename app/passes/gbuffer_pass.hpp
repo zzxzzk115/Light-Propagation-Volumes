@@ -2,15 +2,18 @@
 
 #include "passes/base_geometry_pass.hpp"
 
-class ReflectiveShadowMapPass : public BaseGeometryPass
+#include "camera.hpp"
+
+class GBufferPass : public BaseGeometryPass
 {
 public:
-    explicit ReflectiveShadowMapPass(vgfw::renderer::RenderContext& rc);
-    ~ReflectiveShadowMapPass() = default;
+    explicit GBufferPass(vgfw::renderer::RenderContext& rc);
+    ~GBufferPass() = default;
 
     void addToGraph(FrameGraph&                                       fg,
                     FrameGraphBlackboard&                             blackboard,
-                    const glm::mat4&                                  lightViewProjection,
+                    const vgfw::renderer::Extent2D&                   resolution,
+                    const Camera&                                     camera,
                     const std::vector<vgfw::resource::MeshPrimitive>& meshPrimitives);
 
 private:

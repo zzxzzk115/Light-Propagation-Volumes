@@ -8,6 +8,8 @@ void Camera::updateData(const std::shared_ptr<vgfw::window::Window>& window)
     auto direction  = glm::rotateY(glm::rotateX(glm::vec3(0, 0, 1), glm::radians(pitch)), glm::radians(yaw));
     data.view       = glm::lookAt(data.position, data.position + direction, glm::vec3(.0f, 1.0f, .0f));
     data.projection = glm::perspective(glm::radians(fov), window->getWidth() * 1.0f / window->getHeight(), zNear, zFar);
+    data.inverseView       = glm::inverse(data.view);
+    data.inverseProjection = glm::inverse(data.projection);
 }
 
 void Camera::update(const std::shared_ptr<vgfw::window::Window>& window, float dt)

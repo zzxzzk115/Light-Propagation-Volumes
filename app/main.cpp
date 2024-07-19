@@ -10,8 +10,10 @@
 #include "pass_resource/reflective_shadow_map_data.hpp"
 #include "pass_resource/scene_color_data.hpp"
 
+#include "passes/cascaded_shadow_map_pass.hpp"
+#include "passes/deferred_lighting_pass.hpp"
 #include "passes/final_composition_pass.hpp"
-#include "passes/forward_lighting_pass.hpp"
+#include "passes/gbuffer_pass.hpp"
 #include "passes/radiance_injection_pass.hpp"
 #include "passes/radiance_propagation_pass.hpp"
 #include "passes/reflective_shadow_map_pass.hpp"
@@ -50,12 +52,12 @@ int main()
     }
 
     DirectionalLight light {};
-    light.direction = {0.000, -0.951, 0.308};
-    light.intensity = 3.0f;
+    light.direction = {0.000, -0.984, 0.177};
+    light.intensity = 10.0f;
 
     // Camera properties
     Camera camera {};
-    camera.data.position = {35, 7, -1.5};
+    camera.data.position = {30, 20, -1.5};
     camera.yaw           = -90.0f;
     camera.updateData(window);
 
@@ -65,10 +67,12 @@ int main()
     vgfw::time::TimePoint lastTime = vgfw::time::Clock::now();
 
     // Define render passes
+    CascadedShadowMapPass   csmPass(rc);
     ReflectiveShadowMapPass rsmPass(rc);
     RadianceInjectionPass   radianceInjectionPass(rc);
     RadiancePropagationPass radiancePropagationPass(rc);
-    ForwardLightingPass     forwardLightingPass(rc);
+    GBufferPass             gBufferPass(rc);
+    DeferredLightingPass    deferredLightingPass(rc);
     TonemappingPass         tonemappingPass(rc);
     FinalCompositionPass    finalCompositionPass(rc);
 
@@ -80,7 +84,7 @@ int main()
 
     // UI properties
     VisualMode visualMode   = VisualMode::eDefault;
-    int        lpvIteration = 6;
+    int        lpvIteration = 12;
 
     // Main loop
     while (!window->shouldClose())
@@ -102,6 +106,9 @@ int main()
 
         uploadCameraUniform(fg, blackboard, camera.data);
         uploadLightUniform(fg, blackboard, light);
+
+        // Build Shadow map cascades
+        csmPass.addToGraph(fg, blackboard, camera, light, sponza.meshPrimitives);
 
         // Build RSM cascade
         auto rsmCascade = vgfw::renderer::shadow::buildCascades(camera.zNear,
@@ -127,15 +134,16 @@ int main()
                 fg, propagatedRadiance ? *propagatedRadiance : radianceData, sceneGrid, i);
         blackboard.add<RadianceData>(*propagatedRadiance);
 
-        // Forward Lighting pass
+        // GBuffer pass
+        gBufferPass.addToGraph(fg,
+                               blackboard,
+                               {.width = window->getWidth(), .height = window->getHeight()},
+                               camera,
+                               sponza.meshPrimitives);
+
+        // Deferred Lighting pass
         auto& sceneColor = blackboard.add<SceneColorData>();
-        sceneColor.hdr   = forwardLightingPass.addToGraph(fg,
-                                                        blackboard,
-                                                          {.width = window->getWidth(), .height = window->getHeight()},
-                                                        camera,
-                                                        sponza.meshPrimitives,
-                                                        sceneGrid,
-                                                        visualMode);
+        sceneColor.hdr   = deferredLightingPass.addToGraph(fg, blackboard, rsmLightVP, sceneGrid, visualMode);
 
         // Tone-mapping pass
         sceneColor.ldr = tonemappingPass.addToGraph(fg, sceneColor.hdr);
@@ -175,7 +183,7 @@ int main()
             ImGui::DragFloat("Light Intensity", &light.intensity, 0.5f, 0.0f, 100.0f);
             ImGui::ColorEdit3("Light Color", glm::value_ptr(light.color));
 
-            ImGui::SliderInt("LPV Iteration", &lpvIteration, 1, 50);
+            ImGui::SliderInt("LPV Iteration", &lpvIteration, 1, 200);
 
             const char* visualModeItems[] = {
                 "Default",
@@ -195,6 +203,11 @@ int main()
                 "RSMPosition",
                 "RSMNormal",
                 "RSMFlux",
+                "G-Position",
+                "G-Normal",
+                "G-Albedo",
+                "G-Emissive",
+                "G-MetallicRoughnessAO",
                 "SceneColorHDR",
             };
 

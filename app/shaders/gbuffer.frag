@@ -1,22 +1,16 @@
 #version 460 core
 
-#include "lib/pbr.glsl"
-
 layout(location = 0) in vec2 vTexCoords;
 layout(location = 1) in vec3 vFragPos;
 layout(location = 2) in mat3 vTBN;
 
-layout(location = 0) out vec3 RSMPosition;
-layout(location = 1) out vec3 RSMNormal;
-layout(location = 2) out vec3 RSMFlux;
+layout(location = 0) out vec3 gPosition;
+layout(location = 1) out vec3 gNormal;
+layout(location = 2) out vec3 gAlbedo;
+layout(location = 3) out vec3 gEmissive;
+layout(location = 4) out vec3 gMetallicRoughnessAO;
 
-layout(binding = 1) uniform DirectionalLight {
-    vec3 direction;
-    float intensity;
-    vec3 color;
-} uLight;
-
-layout(binding = 2) uniform PrimitiveMaterial {
+layout(binding = 1) uniform PrimitiveMaterial {
     int baseColorTextureIndex;
     int metallicRoughnessTextureIndex;
     int normalTextureIndex;
@@ -27,7 +21,7 @@ layout(binding = 2) uniform PrimitiveMaterial {
 layout(binding = 0) uniform sampler2D uTextures[5];
 
 void main() {
-    vec3 baseColor = vec3(0);
+    vec3 baseColor;
     float alpha = 1.0;
     if(uMaterial.baseColorTextureIndex != -1) {
         vec4 color = texture(uTextures[uMaterial.baseColorTextureIndex], vTexCoords);
@@ -59,12 +53,14 @@ void main() {
         ao = texture(uTextures[uMaterial.occlusionTextureIndex], vTexCoords).r;
     }
 
-    vec3 emissive = vec3(0);
+    vec3 emissive;
     if(uMaterial.emissiveTextureIndex != -1) {
         emissive = texture(uTextures[uMaterial.emissiveTextureIndex], vTexCoords).rgb;
     }
 
-    RSMPosition = vFragPos;
-    RSMNormal = normal;
-    RSMFlux = baseColor * uLight.intensity + emissive;
+    gPosition = vFragPos;
+    gNormal = normal;
+    gAlbedo = baseColor;
+    gEmissive = emissive;
+    gMetallicRoughnessAO = vec3(metallic, roughness, ao);
 }

@@ -9,6 +9,8 @@ struct Camera
         alignas(16) glm::vec3 position;
         alignas(16) glm::mat4 view;
         alignas(16) glm::mat4 projection;
+        alignas(16) glm::mat4 inverseView;
+        alignas(16) glm::mat4 inverseProjection;
     } data;
 
     float fov   = 60.0f;

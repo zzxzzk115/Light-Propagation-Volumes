@@ -13,7 +13,10 @@ void uploadCameraUniform(FrameGraph& fg, FrameGraphBlackboard& blackboard, const
             data.cameraUniform = builder.write(data.cameraUniform);
         },
         [=](const CameraData& data, FrameGraphPassResources& resources, void* ctx) {
+            NAMED_DEBUG_MARKER("Upload Camera Uniform");
+            VGFW_PROFILE_GL("Upload Camera Uniform");
             VGFW_PROFILE_NAMED_SCOPE("Upload Camera Uniform");
+
             static_cast<vgfw::renderer::RenderContext*>(ctx)->upload(
                 vgfw::renderer::framegraph::getBuffer(resources, data.cameraUniform),
                 0,

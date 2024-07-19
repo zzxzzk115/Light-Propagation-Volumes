@@ -5,15 +5,7 @@
 
 #include "lpv_config.hpp"
 
-ReflectiveShadowMapPass::ReflectiveShadowMapPass(vgfw::renderer::RenderContext& rc) : BasePass(rc) {}
-
-ReflectiveShadowMapPass::~ReflectiveShadowMapPass()
-{
-    for (auto& [_, pipeline] : m_Pipelines)
-    {
-        m_RenderContext.destroy(pipeline);
-    }
-}
+ReflectiveShadowMapPass::ReflectiveShadowMapPass(vgfw::renderer::RenderContext& rc) : BaseGeometryPass(rc) {}
 
 void ReflectiveShadowMapPass::addToGraph(FrameGraph&                                       fg,
                                          FrameGraphBlackboard&                             blackboard,
@@ -34,26 +26,26 @@ void ReflectiveShadowMapPass::addToGraph(FrameGraph&                            
             data.position = builder.create<vgfw::renderer::framegraph::FrameGraphTexture>(
                 "RSM-Position",
                 {
-                    .extent = kExtent,
-                    .format = vgfw::renderer::PixelFormat::eRGB16F,
-                    .wrapMode   = vgfw::renderer::WrapMode::eClampToOpaqueBlack,
-                    .filter = vgfw::renderer::TexelFilter::eNearest,
+                    .extent   = kExtent,
+                    .format   = vgfw::renderer::PixelFormat::eRGB16F,
+                    .wrapMode = vgfw::renderer::WrapMode::eClampToOpaqueBlack,
+                    .filter   = vgfw::renderer::TexelFilter::eNearest,
                 });
             data.normal = builder.create<vgfw::renderer::framegraph::FrameGraphTexture>(
                 "RSM-Normal",
                 {
-                    .extent = kExtent,
-                    .format = vgfw::renderer::PixelFormat::eRGB16F,
-                    .wrapMode   = vgfw::renderer::WrapMode::eClampToOpaqueBlack,
-                    .filter = vgfw::renderer::TexelFilter::eNearest,
+                    .extent   = kExtent,
+                    .format   = vgfw::renderer::PixelFormat::eRGB16F,
+                    .wrapMode = vgfw::renderer::WrapMode::eClampToOpaqueBlack,
+                    .filter   = vgfw::renderer::TexelFilter::eNearest,
                 });
             data.flux = builder.create<vgfw::renderer::framegraph::FrameGraphTexture>(
                 "RSM-Flux",
                 {
-                    .extent = kExtent,
-                    .format = vgfw::renderer::PixelFormat::eRGB16F,
-                    .wrapMode   = vgfw::renderer::WrapMode::eClampToOpaqueBlack,
-                    .filter = vgfw::renderer::TexelFilter::eNearest,
+                    .extent   = kExtent,
+                    .format   = vgfw::renderer::PixelFormat::eRGB16F,
+                    .wrapMode = vgfw::renderer::WrapMode::eClampToOpaqueBlack,
+                    .filter   = vgfw::renderer::TexelFilter::eNearest,
                 });
 
             data.depth = builder.create<vgfw::renderer::framegraph::FrameGraphTexture>(
@@ -118,26 +110,6 @@ void ReflectiveShadowMapPass::addToGraph(FrameGraph&                            
 
             rc.endRendering(framebuffer);
         });
-}
-
-vgfw::renderer::GraphicsPipeline& ReflectiveShadowMapPass::getPipeline(const vgfw::renderer::VertexFormat& vertexFormat)
-{
-    size_t hash = vertexFormat.getHash();
-
-    vgfw::renderer::GraphicsPipeline* passPipeline = nullptr;
-
-    if (const auto it = m_Pipelines.find(hash); it != m_Pipelines.cend())
-        passPipeline = &it->second;
-
-    if (!passPipeline)
-    {
-        auto pipeline = createPipeline(vertexFormat);
-
-        const auto& it = m_Pipelines.insert_or_assign(hash, std::move(pipeline)).first;
-        passPipeline   = &it->second;
-    }
-
-    return *passPipeline;
 }
 
 vgfw::renderer::GraphicsPipeline

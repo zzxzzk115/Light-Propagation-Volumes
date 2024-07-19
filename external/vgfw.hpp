@@ -188,6 +188,36 @@ namespace vgfw
             auto operator<=>(const AABB&) const = delete;
         };
 
+        struct Plane
+        {
+            glm::vec3 normal {0.0f};
+            float     distance {0.0f};
+
+            void  normalize();
+            float distanceTo(const glm::vec3&) const;
+        };
+
+        class Frustum final
+        {
+        public:
+            Frustum() = default;
+            explicit Frustum(const glm::mat4&);
+            Frustum(const Frustum&)     = delete;
+            Frustum(Frustum&&) noexcept = default;
+            ~Frustum()                  = default;
+
+            Frustum& operator=(const Frustum&)     = delete;
+            Frustum& operator=(Frustum&&) noexcept = default;
+
+            void update(const glm::mat4& m);
+
+            bool testPoint(const glm::vec3&) const;
+            bool testAABB(const AABB&) const;
+
+        private:
+            std::array<Plane, 6> m_Planes;
+        };
+
         inline constexpr bool  isPowerOf2(uint32_t v) { return v && !(v & (v - 1)); }
         inline constexpr float max3(const glm::vec3& v) { return glm::max(glm::max(v.x, v.y), v.z); }
     } // namespace math
@@ -1220,7 +1250,9 @@ namespace vgfw
             int              indexInOwnerModel {-1};
             resource::Model* ownerModel {nullptr};
 
-            void build(renderer::VertexFormat::Builder& vertexFormatBuilder, const glm::vec3& scale, renderer::RenderContext& rc);
+            void build(renderer::VertexFormat::Builder& vertexFormatBuilder,
+                       const glm::vec3&                 scale,
+                       renderer::RenderContext&         rc);
 
         private:
             friend class renderer::RenderContext;
@@ -1375,6 +1407,104 @@ namespace vgfw
                 .min = {glm::min(xa, xb) + glm::min(ya, yb) + glm::min(za, zb) + m[3]},
                 .max = {glm::max(xa, xb) + glm::max(ya, yb) + glm::max(za, zb) + m[3]},
             };
+        }
+
+        void Plane::normalize()
+        {
+            const auto magnitude = glm::length(normal);
+            normal /= magnitude;
+            distance /= magnitude;
+        }
+
+        float Plane::distanceTo(const glm::vec3& p) const { return glm::dot(normal, p) + distance; }
+
+        enum FrustumSide
+        {
+            eRight  = 0,
+            eLeft   = 1,
+            eBottom = 2,
+            eTop    = 3,
+            eNear   = 4, // Back
+            eFar    = 5  // Front
+        };
+
+        enum class IntersectionResult
+        {
+            eOutside,
+            eIntersect,
+            eInside
+        };
+
+        Frustum::Frustum(const glm::mat4& m) { update(m); }
+
+        void Frustum::update(const glm::mat4& m)
+        {
+            m_Planes[FrustumSide::eLeft] = Plane {
+                .normal   = {m[0][3] + m[0][0], m[1][3] + m[1][0], m[2][3] + m[2][0]},
+                .distance = m[3][3] + m[3][0],
+            };
+            m_Planes[FrustumSide::eRight] = Plane {
+                .normal   = {m[0][3] - m[0][0], m[1][3] - m[1][0], m[2][3] - m[2][0]},
+                .distance = m[3][3] - m[3][0],
+            };
+            m_Planes[FrustumSide::eBottom] = Plane {
+                .normal   = {m[0][3] + m[0][1], m[1][3] + m[1][1], m[2][3] + m[2][1]},
+                .distance = m[3][3] + m[3][1],
+            };
+            m_Planes[FrustumSide::eTop] = Plane {
+                .normal   = {m[0][3] - m[0][1], m[1][3] - m[1][1], m[2][3] - m[2][1]},
+                .distance = m[3][3] - m[3][1],
+            };
+            m_Planes[FrustumSide::eNear] = Plane {
+                .normal   = {m[0][3] + m[0][2], m[1][3] + m[1][2], m[2][3] + m[2][2]},
+                .distance = m[3][3] + m[3][2],
+            };
+            m_Planes[FrustumSide::eFar] = Plane {
+                .normal   = {m[0][3] - m[0][2], m[1][3] - m[1][2], m[2][3] - m[2][2]},
+                .distance = m[3][3] - m[3][2],
+            };
+
+            for (auto& plane : m_Planes)
+                plane.normalize();
+        }
+
+        bool Frustum::testPoint(const glm::vec3& point) const
+        {
+            for (const auto& plane : m_Planes)
+                if (plane.distanceTo(point) < 0)
+                    return false; // Outside
+
+            return true; // Inside
+        }
+
+        bool Frustum::testAABB(const AABB& aabb) const
+        {
+            auto result {IntersectionResult::eInside};
+            for (const auto& plane : m_Planes)
+            {
+                auto pv = aabb.min;
+                auto nv = aabb.max;
+                if (plane.normal.x >= 0)
+                {
+                    pv.x = aabb.max.x;
+                    nv.x = aabb.min.x;
+                }
+                if (plane.normal.y >= 0)
+                {
+                    pv.y = aabb.max.y;
+                    nv.y = aabb.min.y;
+                }
+                if (plane.normal.z >= 0)
+                {
+                    pv.z = aabb.max.z;
+                    nv.z = aabb.min.z;
+                }
+                if (plane.distanceTo(pv) < 0)
+                    return false;
+                if (plane.distanceTo(nv) < 0)
+                    result = IntersectionResult::eIntersect;
+            }
+            return result != IntersectionResult::eOutside;
         }
     } // namespace math
 
@@ -2599,8 +2729,8 @@ namespace vgfw
                 assert(indexBuffer.has_value());
                 setIndexBuffer(*indexBuffer);
 
-                const auto stride = static_cast<GLsizei>(indexBuffer->get().getIndexType());
-                const auto indices =
+                const auto        stride = static_cast<GLsizei>(indexBuffer->get().getIndexType());
+                const auto* const indices =
                     reinterpret_cast<const void*>(static_cast<uint64_t>(stride) * geometryInfo.indexOffset);
 
                 glDrawElementsInstancedBaseVertex(static_cast<GLenum>(geometryInfo.topology),
@@ -3500,7 +3630,9 @@ namespace vgfw
 
     namespace resource
     {
-        void MeshPrimitive::build(renderer::VertexFormat::Builder& vertexFormatBuilder, const glm::vec3& scale, renderer::RenderContext& rc)
+        void MeshPrimitive::build(renderer::VertexFormat::Builder& vertexFormatBuilder,
+                                  const glm::vec3&                 scale,
+                                  renderer::RenderContext&         rc)
         {
             vertexFormat = vertexFormatBuilder.build();
             indexCount   = indices.size();
