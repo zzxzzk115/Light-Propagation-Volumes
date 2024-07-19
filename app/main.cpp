@@ -1,7 +1,6 @@
 #define VGFW_IMPLEMENTATION
+#define IMGUI_DEFINE_MATH_OPERATORS
 #include "vgfw.hpp"
-
-#include "render_target.hpp"
 
 #include "uniforms/camera_uniform.hpp"
 #include "uniforms/light_uniform.hpp"
@@ -22,6 +21,7 @@
 
 #include "grid3d.hpp"
 #include "lpv_config.hpp"
+#include "render_target.hpp"
 #include "visual_mode.hpp"
 
 int main()
@@ -180,6 +180,22 @@ int main()
 
         {
             VGFW_PROFILE_NAMED_SCOPE("ImGui");
+            const auto windowFlags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_AlwaysAutoResize |
+                                     ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing |
+                                     ImGuiWindowFlags_NoNav | ImGuiWindowFlags_NoMove;
+
+            const ImVec2 pad {10.0f, 10.0f};
+            const auto*  viewport = ImGui::GetMainViewport();
+            ImGui::SetNextWindowPos(viewport->WorkPos + pad, ImGuiCond_Always);
+
+            ImGui::SetNextWindowBgAlpha(0.35f);
+            if (ImGui::Begin("MetricsOverlay", nullptr, windowFlags))
+            {
+                const auto frameRate = ImGui::GetIO().Framerate;
+                ImGui::Text("%.3f ms/frame (%.1f FPS)", 1000.0f / frameRate, frameRate);
+            }
+            ImGui::End();
+
             ImGui::Begin("Render settings");
             ImGui::SliderFloat("Camera FOV", &camera.fov, 1.0f, 179.0f);
             ImGui::Text("Press CAPSLOCK to toggle the camera (W/A/S/D/Q/E + Mouse)");
