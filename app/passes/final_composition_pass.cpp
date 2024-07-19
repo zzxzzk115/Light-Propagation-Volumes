@@ -33,11 +33,7 @@ void FinalCompositionPass::compose(FrameGraph& fg, FrameGraphBlackboard& blackbo
     switch (renderTarget)
     {
         case RenderTarget::eFinal:
-            output = blackboard.get<SceneColorData>().ldr;
-            break;
-
-        case RenderTarget::eSceneColorHDR:
-            output = blackboard.get<SceneColorData>().hdr;
+            output = blackboard.get<SceneColorData>().aa;
             break;
 
         case RenderTarget::eRSMPosition:
@@ -70,6 +66,14 @@ void FinalCompositionPass::compose(FrameGraph& fg, FrameGraphBlackboard& blackbo
 
         case RenderTarget::eGMetallicRoughnessAO:
             output = blackboard.get<GBufferData>().metallicRoughnessAO;
+            break;
+
+        case RenderTarget::eSceneColorHDR:
+            output = blackboard.get<SceneColorData>().hdr;
+            break;
+
+        case RenderTarget::eSceneColorLDR:
+            output = blackboard.get<SceneColorData>().ldr;
             break;
     }
 

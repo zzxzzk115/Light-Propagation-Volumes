@@ -6,4 +6,5 @@ struct SceneColorData
 {
     FrameGraphResource ldr;
     FrameGraphResource hdr;
+    FrameGraphResource aa;
 };

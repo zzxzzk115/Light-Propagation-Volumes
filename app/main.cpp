@@ -13,6 +13,7 @@
 #include "passes/cascaded_shadow_map_pass.hpp"
 #include "passes/deferred_lighting_pass.hpp"
 #include "passes/final_composition_pass.hpp"
+#include "passes/fxaa_pass.hpp"
 #include "passes/gbuffer_pass.hpp"
 #include "passes/radiance_injection_pass.hpp"
 #include "passes/radiance_propagation_pass.hpp"
@@ -74,6 +75,7 @@ int main()
     GBufferPass             gBufferPass(rc);
     DeferredLightingPass    deferredLightingPass(rc);
     TonemappingPass         tonemappingPass(rc);
+    FxaaPass                fxaaPass(rc);
     FinalCompositionPass    finalCompositionPass(rc);
 
     // Define render target
@@ -148,6 +150,9 @@ int main()
         // Tone-mapping pass
         sceneColor.ldr = tonemappingPass.addToGraph(fg, sceneColor.hdr);
 
+        // FXAA pass
+        sceneColor.aa = fxaaPass.addToGraph(fg, sceneColor.ldr);
+
         // Final composition pass
         finalCompositionPass.compose(fg, blackboard, renderTarget);
 
@@ -198,18 +203,17 @@ int main()
                 visualMode = static_cast<VisualMode>(currentVisualMode);
             }
 
-            const char* renderTargetItems[] = {
-                "Final",
-                "RSMPosition",
-                "RSMNormal",
-                "RSMFlux",
-                "G-Position",
-                "G-Normal",
-                "G-Albedo",
-                "G-Emissive",
-                "G-MetallicRoughnessAO",
-                "SceneColorHDR",
-            };
+            const char* renderTargetItems[] = {"Final",
+                                               "RSMPosition",
+                                               "RSMNormal",
+                                               "RSMFlux",
+                                               "G-Position",
+                                               "G-Normal",
+                                               "G-Albedo",
+                                               "G-Emissive",
+                                               "G-MetallicRoughnessAO",
+                                               "SceneColorHDR",
+                                               "SceneColorLDR"};
 
             int currentRenderTarget = static_cast<int>(renderTarget);
 

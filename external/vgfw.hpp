@@ -982,6 +982,7 @@ namespace vgfw
             RenderContext& setUniform1i(const std::string& name, int32_t);
             RenderContext& setUniform1ui(const std::string& name, uint32_t);
 
+            RenderContext& setUniformVec2(const std::string& name, const glm::vec2&);
             RenderContext& setUniformVec3(const std::string& name, const glm::vec3&);
             RenderContext& setUniformVec4(const std::string& name, const glm::vec4&);
 
@@ -2606,6 +2607,16 @@ namespace vgfw
             const auto location = glGetUniformLocation(m_CurrentPipeline.m_Program, name.data());
             if (location != GL_INVALID_INDEX)
                 glProgramUniform1ui(m_CurrentPipeline.m_Program, location, i);
+            return *this;
+        }
+
+        RenderContext& RenderContext::setUniformVec2(const std::string& name, const glm::vec2& v)
+        {
+            const auto location = glGetUniformLocation(m_CurrentPipeline.m_Program, name.data());
+            if (location != GL_INVALID_INDEX)
+            {
+                glProgramUniform2fv(m_CurrentPipeline.m_Program, location, 1, glm::value_ptr(v));
+            }
             return *this;
         }
 
