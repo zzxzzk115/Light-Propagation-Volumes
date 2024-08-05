@@ -84,34 +84,6 @@ add_rules("plugin.compile_commands.autoupdate", {outputdir = ".vscode"})
 -- add my own xmake-repo here
 add_repositories("my-xmake-repo https://github.com/zzxzzk115/xmake-repo.git dev")
 
--- add requirements
-add_requires("fg", "glad", "glfw", "glm", "spdlog", "stb", "tinyobjloader", "tinygltf")
-add_requires("imgui v1.90.8-docking", {configs = {glfw = true, opengl3 = true, wchar32 = true}})
-
--- target defination, name: vgfw
-target("vgfw")
-    -- set target kind: header-only
-    set_kind("headeronly")
-
-    add_includedirs("external/", { public = true })
-
-    -- add header files
-    add_headerfiles("external/vgfw.hpp")
-
-    add_rules("utils.install.cmake_importfiles")
-    add_rules("utils.install.pkgconfig_importfiles")
-
-    -- add packages
-    add_packages("fg", { public = true })
-    add_packages("glad", { public = true })
-    add_packages("glfw", { public = true })
-    add_packages("glm", { public = true })
-    add_packages("imgui", { public = true })
-    add_packages("spdlog", { public = true })
-    add_packages("stb", { public = true })
-    add_packages("tinyobjloader", { public = true })
-    add_packages("tinygltf", { public = true })
-
 -- if build application, then include application
 if has_config("app") then
     includes("app")

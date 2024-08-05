@@ -134,7 +134,7 @@ int main()
         for (auto i = 0; i < lpvIteration; ++i)
             propagatedRadiance = radiancePropagationPass.addToGraph(
                 fg, propagatedRadiance ? *propagatedRadiance : radianceData, sceneGrid, i);
-        blackboard.add<RadianceData>(*propagatedRadiance);
+        blackboard.add<RadianceData>(propagatedRadiance ? *propagatedRadiance : radianceData);
 
         // GBuffer pass
         gBufferPass.addToGraph(fg,
@@ -204,7 +204,7 @@ int main()
             ImGui::DragFloat("Light Intensity", &light.intensity, 0.5f, 0.0f, 100.0f);
             ImGui::ColorEdit3("Light Color", glm::value_ptr(light.color));
 
-            ImGui::SliderInt("LPV Iteration", &lpvIteration, 1, 200);
+            ImGui::SliderInt("LPV Iteration", &lpvIteration, 0, 200);
 
             const char* visualModeItems[] = {
                 "Default",

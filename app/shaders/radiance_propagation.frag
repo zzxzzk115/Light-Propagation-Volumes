@@ -1,5 +1,23 @@
 #version 460 core
 
+// clang-format off
+const vec2 kCellSides[4] = {
+    vec2(1.0, 0.0),
+    vec2(0.0, 1.0),
+    vec2(-1.0, 0.0),
+    vec2(0.0, -1.0),
+};
+
+const mat3 kNeighbourOrientations[6] = {
+    mat3(1, 0, 0, 0, 1, 0, 0, 0, 1),   // Z+
+    mat3(-1, 0, 0, 0, 1, 0, 0, 0, -1), // Z-
+    mat3(0, 0, 1, 0, 1, 0, -1, 0, 0),  // X+
+    mat3(0, 0, -1, 0, 1, 0, 1, 0, 0),  // X-
+    mat3(1, 0, 0, 0, 0, 1, 0, -1, 0),  // Y+
+    mat3(1, 0, 0, 0, 0, -1, 0, 1, 0)   // Y-
+};
+// clang-format on
+
 #include "lib/math.glsl"
 #include "lib/lpv.glsl"
 
@@ -15,40 +33,15 @@ layout(location = 0) out vec4 Propagated_SH_R;
 layout(location = 1) out vec4 Propagated_SH_G;
 layout(location = 2) out vec4 Propagated_SH_B;
 
-// clang-format off
-const vec2 kCellSides[4] = {
-    vec2(1.0, 0.0),
-    vec2(0.0, 1.0),
-    vec2(-1.0, 0.0),
-    vec2(0.0, -1.0),
-};
-// clang-format on
-
-// orientation = [ right | up | forward ] = [ x | y | z ]
 vec3 getEvalSideDirection(int index, mat3 orientation) {
-    const float smallComponent = 0.4472135; // 1 / sqrt(5)
-    const float bigComponent = 0.894427;    // 2 / sqrt(5)
-
     const vec2 side = kCellSides[index];
-
-    return orientation * vec3(side.x * smallComponent, side.y * smallComponent, bigComponent);
+    return orientation * vec3(side.x * 0.4472135, side.y * 0.4472135, 0.894427);
 }
 
 vec3 getReprojSideDirection(int index, mat3 orientation) {
     const vec2 side = kCellSides[index];
     return orientation * vec3(side.x, side.y, 0);
 }
-
-// clang-format off
-const mat3 kNeighbourOrientations[6] = {
-    mat3(1, 0, 0, 0, 1, 0, 0, 0, 1),   // Z+
-    mat3(-1, 0, 0, 0, 1, 0, 0, 0, -1), // Z-
-    mat3(0, 0, 1, 0, 1, 0, -1, 0, 0),  // X+
-    mat3(0, 0, -1, 0, 1, 0, 1, 0, 0),  // X-
-    mat3(1, 0, 0, 0, 0, 1, 0, -1, 0),  // Y+
-    mat3(1, 0, 0, 0, 0, -1, 0, 1, 0)   // Y-
-};
-// clang-format on
 
 SH_Coefficients getContributions(ivec3 cellIndex) {
     SH_Coefficients contribution = {vec4(0.0), vec4(0.0), vec4(0.0)};
@@ -66,26 +59,26 @@ SH_Coefficients getContributions(ivec3 cellIndex) {
         };
         // clang-format on
 
-        const float kDirectFaceSubtendedSolidAngle = 0.4006696846 / PI;
+        const float kSolidAngle = 0.4006696846 / PI;
 
         const vec4 mainDirectionCosineLobeSH = SH_EvaluateCosineLobe(mainDirection);
         const vec4 mainDirectionSH = SH_Evaluate(mainDirection);
-        contribution.red += kDirectFaceSubtendedSolidAngle * dot(neighbourCoeffs.red, mainDirectionSH) * mainDirectionCosineLobeSH;
-        contribution.green += kDirectFaceSubtendedSolidAngle * dot(neighbourCoeffs.green, mainDirectionSH) * mainDirectionCosineLobeSH;
-        contribution.blue += kDirectFaceSubtendedSolidAngle * dot(neighbourCoeffs.blue, mainDirectionSH) * mainDirectionCosineLobeSH;
+        contribution.red += kSolidAngle * dot(neighbourCoeffs.red, mainDirectionSH) * mainDirectionCosineLobeSH;
+        contribution.green += kSolidAngle * dot(neighbourCoeffs.green, mainDirectionSH) * mainDirectionCosineLobeSH;
+        contribution.blue += kSolidAngle * dot(neighbourCoeffs.blue, mainDirectionSH) * mainDirectionCosineLobeSH;
 
         const float kSideFaceSubtendedSolidAngle = 0.4234413544 / PI;
 
-        for(int sideFace = 0; sideFace < 4; ++sideFace) {
-            const vec3 evalDirection = getEvalSideDirection(sideFace, orientation);
-            const vec3 reprojDirection = getReprojSideDirection(sideFace, orientation);
+        for(int sideIndex = 0; sideIndex < 4; ++sideIndex) {
+            const vec3 evalSideDirection = getEvalSideDirection(sideIndex, orientation);
+            const vec3 reprojSideDirection = getReprojSideDirection(sideIndex, orientation);
 
-            const vec4 reprojDirectionCosineLobeSH = SH_EvaluateCosineLobe(reprojDirection);
-            const vec4 evalDirectionSH = SH_Evaluate(evalDirection);
+            const vec4 reprojSideDirectionCosineLobeSH = SH_EvaluateCosineLobe(reprojSideDirection);
+            const vec4 evalSideDirectionSH = SH_Evaluate(evalSideDirection);
 
-            contribution.red += kSideFaceSubtendedSolidAngle * dot(neighbourCoeffs.red, evalDirectionSH) * reprojDirectionCosineLobeSH;
-            contribution.green += kSideFaceSubtendedSolidAngle * dot(neighbourCoeffs.green, evalDirectionSH) * reprojDirectionCosineLobeSH;
-            contribution.blue += kSideFaceSubtendedSolidAngle * dot(neighbourCoeffs.blue, evalDirectionSH) * reprojDirectionCosineLobeSH;
+            contribution.red += kSideFaceSubtendedSolidAngle * dot(neighbourCoeffs.red, evalSideDirectionSH) * reprojSideDirectionCosineLobeSH;
+            contribution.green += kSideFaceSubtendedSolidAngle * dot(neighbourCoeffs.green, evalSideDirectionSH) * reprojSideDirectionCosineLobeSH;
+            contribution.blue += kSideFaceSubtendedSolidAngle * dot(neighbourCoeffs.blue, evalSideDirectionSH) * reprojSideDirectionCosineLobeSH;
         }
     }
 

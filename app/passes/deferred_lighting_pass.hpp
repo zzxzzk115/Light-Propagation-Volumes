@@ -2,7 +2,6 @@
 
 #include "passes/base_pass.hpp"
 
-#include "camera.hpp"
 #include "grid3d.hpp"
 #include "visual_mode.hpp"
 
