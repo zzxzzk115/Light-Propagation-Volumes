@@ -28,7 +28,7 @@ RadianceData RadiancePropagationPass::addToGraph(FrameGraph&         fg,
 {
     VGFW_PROFILE_FUNCTION
 
-    const auto name   = "RadiancePropagation #" + std::to_string(iteration);
+    const auto name   = fmt::format("RadiancePropagation #{0}", iteration);
     const auto extent = vgfw::renderer::Extent2D {.width = grid.size.x, .height = grid.size.y};
 
     const auto data = fg.addCallbackPass<RadianceData>(

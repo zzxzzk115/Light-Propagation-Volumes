@@ -102,7 +102,7 @@ CascadedShadowMapPass::addCascadePass(FrameGraph&                               
                                       uint32_t                                          cascadeIdx)
 {
     assert(cascadeIdx < kNumCascades);
-    const auto name = "CSM #" + std::to_string(cascadeIdx);
+    const auto name = fmt::format("CSM #{0}", cascadeIdx);
 
     struct Data
     {
@@ -128,8 +128,8 @@ CascadedShadowMapPass::addCascadePass(FrameGraph&                               
         },
         [=, this, &meshPrimitives](const Data& data, FrameGraphPassResources& resources, void* ctx) {
             NAMED_DEBUG_MARKER(name);
-            VGFW_PROFILE_GL("CSM");
-            VGFW_PROFILE_NAMED_SCOPE("CSM");
+            VGFW_PROFILE_GL("CSM Pass");
+            VGFW_PROFILE_NAMED_SCOPE("CSM Pass");
 
             constexpr float                     kFarPlane {1.0f};
             const vgfw::renderer::RenderingInfo renderingInfo {

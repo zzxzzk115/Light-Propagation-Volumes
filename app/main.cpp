@@ -14,6 +14,7 @@
 #include "passes/final_composition_pass.hpp"
 #include "passes/fxaa_pass.hpp"
 #include "passes/gbuffer_pass.hpp"
+#include "passes/hbao_pass.hpp"
 #include "passes/radiance_injection_pass.hpp"
 #include "passes/radiance_propagation_pass.hpp"
 #include "passes/reflective_shadow_map_pass.hpp"
@@ -73,6 +74,7 @@ int main()
     RadianceInjectionPass   radianceInjectionPass(rc);
     RadiancePropagationPass radiancePropagationPass(rc);
     GBufferPass             gBufferPass(rc);
+    HbaoPass                hbaoPass(rc);
     DeferredLightingPass    deferredLightingPass(rc);
     TonemappingPass         tonemappingPass(rc);
     FxaaPass                fxaaPass(rc);
@@ -142,6 +144,9 @@ int main()
                                {.width = window->getWidth(), .height = window->getHeight()},
                                camera,
                                sponza.meshPrimitives);
+
+        // HBAO pass
+        hbaoPass.addToGraph(fg, blackboard);
 
         // Deferred Lighting pass
         auto& sceneColor = blackboard.add<SceneColorData>();
@@ -228,6 +233,7 @@ int main()
                                                "G-Albedo",
                                                "G-Emissive",
                                                "G-MetallicRoughnessAO",
+                                               "HBAO",
                                                "SceneColorHDR",
                                                "SceneColorLDR"};
 

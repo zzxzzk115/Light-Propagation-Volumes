@@ -1,5 +1,6 @@
 #include "passes/final_composition_pass.hpp"
 #include "pass_resource/gbuffer_data.hpp"
+#include "pass_resource/hbao_data.hpp"
 #include "pass_resource/reflective_shadow_map_data.hpp"
 #include "pass_resource/scene_color_data.hpp"
 
@@ -66,6 +67,10 @@ void FinalCompositionPass::compose(FrameGraph& fg, FrameGraphBlackboard& blackbo
 
         case RenderTarget::eGMetallicRoughnessAO:
             output = blackboard.get<GBufferData>().metallicRoughnessAO;
+            break;
+
+        case RenderTarget::eHBAO:
+            output = blackboard.get<HBAOData>().hbao;
             break;
 
         case RenderTarget::eSceneColorHDR:

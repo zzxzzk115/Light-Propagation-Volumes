@@ -1,9 +1,11 @@
 #include "passes/deferred_lighting_pass.hpp"
 #include "pass_resource/camera_data.hpp"
 #include "pass_resource/gbuffer_data.hpp"
+#include "pass_resource/hbao_data.hpp"
 #include "pass_resource/light_data.hpp"
 #include "pass_resource/radiance_data.hpp"
 #include "pass_resource/shadow_data.hpp"
+#include "vgfw.hpp"
 
 DeferredLightingPass::DeferredLightingPass(vgfw::renderer::RenderContext& rc) : BasePass(rc)
 {
@@ -40,6 +42,7 @@ FrameGraphResource DeferredLightingPass::addToGraph(FrameGraph&           fg,
     const auto gBuffer         = blackboard.get<GBufferData>();
     const auto radianceData    = blackboard.get<RadianceData>();
     const auto shadowData      = blackboard.get<ShadowData>();
+    const auto hbaoData        = blackboard.get<HBAOData>();
 
     const auto extent = fg.getDescriptor<vgfw::renderer::framegraph::FrameGraphTexture>(gBuffer.depth).extent;
 
@@ -67,6 +70,8 @@ FrameGraphResource DeferredLightingPass::addToGraph(FrameGraph&           fg,
 
             builder.read(shadowData.cascadedShadowMaps);
             builder.read(shadowData.cascadedUniformBuffer);
+
+            builder.read(hbaoData.hbao);
 
             data.sceneColorHDR = builder.create<vgfw::renderer::framegraph::FrameGraphTexture>(
                 "SceneColorHDR", {.extent = extent, .format = vgfw::renderer::PixelFormat::eRGB16F});
@@ -112,6 +117,7 @@ FrameGraphResource DeferredLightingPass::addToGraph(FrameGraph&           fg,
                 .bindTexture(7, vgfw::renderer::framegraph::getTexture(resources, radianceData.r))
                 .bindTexture(8, vgfw::renderer::framegraph::getTexture(resources, radianceData.g))
                 .bindTexture(9, vgfw::renderer::framegraph::getTexture(resources, radianceData.b))
+                .bindTexture(10, vgfw::renderer::framegraph::getTexture(resources, hbaoData.hbao))
                 .drawFullScreenTriangle()
                 .endRendering(framebuffer);
         });

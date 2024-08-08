@@ -33,6 +33,7 @@ layout(binding = 6) uniform sampler2DArrayShadow CascadedShadowMaps;
 layout(binding = 7) uniform sampler3D Propagated_SH_R;
 layout(binding = 8) uniform sampler3D Propagated_SH_G;
 layout(binding = 9) uniform sampler3D Propagated_SH_B;
+layout(binding = 10) uniform sampler2D HBAO;
 
 uniform uint uVisualMode;
 uniform mat4 uLightVP;
@@ -49,7 +50,7 @@ void main() {
     vec4 metallicRoughnessAO = texture(gMetallicRoughnessAO, vTexCoords);
     float metallic = metallicRoughnessAO.r;
     float roughness = metallicRoughnessAO.g;
-    float ao = metallicRoughnessAO.b;
+    float ao = metallicRoughnessAO.b * texture(HBAO, vTexCoords).r;
 
     // select cascade layer
     vec3 fragPosViewSpace = viewPositionFromDepth(depth, vTexCoords, uCamera.inverseProjection);
