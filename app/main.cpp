@@ -5,6 +5,7 @@
 #include "uniforms/camera_uniform.hpp"
 #include "uniforms/light_uniform.hpp"
 
+#include "pass_resource/hbao_data.hpp"
 #include "pass_resource/radiance_data.hpp"
 #include "pass_resource/reflective_shadow_map_data.hpp"
 #include "pass_resource/scene_color_data.hpp"
@@ -13,6 +14,7 @@
 #include "passes/deferred_lighting_pass.hpp"
 #include "passes/final_composition_pass.hpp"
 #include "passes/fxaa_pass.hpp"
+#include "passes/gaussian_blur_pass.hpp"
 #include "passes/gbuffer_pass.hpp"
 #include "passes/hbao_pass.hpp"
 #include "passes/radiance_injection_pass.hpp"
@@ -76,6 +78,7 @@ int main()
     RadiancePropagationPass radiancePropagationPass(rc);
     GBufferPass             gBufferPass(rc);
     HbaoPass                hbaoPass(rc);
+    GaussianBlurPass        gaussianBlurPass(rc);
     DeferredLightingPass    deferredLightingPass(rc);
     TonemappingPass         tonemappingPass(rc);
     FxaaPass                fxaaPass(rc);
@@ -154,6 +157,10 @@ int main()
         {
             // HBAO pass
             hbaoPass.addToGraph(fg, blackboard, hbaoProperties);
+
+            // 2-pass Gaussian blur
+            auto& hbao = blackboard.get<HBAOData>().hbao;
+            hbao       = gaussianBlurPass.addToGraph(fg, hbao, 1.0f);
         }
 
         // Deferred Lighting pass
