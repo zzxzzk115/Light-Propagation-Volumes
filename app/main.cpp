@@ -22,6 +22,7 @@
 
 #include "grid3d.hpp"
 #include "lpv_config.hpp"
+#include "render_settings.hpp"
 #include "render_target.hpp"
 #include "visual_mode.hpp"
 
@@ -87,8 +88,12 @@ int main()
     Grid3D sceneGrid {sponza.aabb};
 
     // UI properties
-    VisualMode visualMode   = VisualMode::eDefault;
-    int        lpvIteration = 12;
+    VisualMode     visualMode   = VisualMode::eDefault;
+    int            lpvIteration = 12;
+    HBAOProperties hbaoProperties {};
+
+    // Render settings
+    RenderSettings settings {};
 
     // Main loop
     while (!window->shouldClose())
@@ -145,12 +150,15 @@ int main()
                                camera,
                                sponza.meshPrimitives);
 
-        // HBAO pass
-        hbaoPass.addToGraph(fg, blackboard);
+        if (settings.enableHBAO)
+        {
+            // HBAO pass
+            hbaoPass.addToGraph(fg, blackboard, hbaoProperties);
+        }
 
         // Deferred Lighting pass
         auto& sceneColor = blackboard.add<SceneColorData>();
-        sceneColor.hdr   = deferredLightingPass.addToGraph(fg, blackboard, rsmLightVP, sceneGrid, visualMode);
+        sceneColor.hdr   = deferredLightingPass.addToGraph(fg, blackboard, rsmLightVP, sceneGrid, visualMode, settings);
 
         // Tone-mapping pass
         sceneColor.ldr = tonemappingPass.addToGraph(fg, sceneColor.hdr);
@@ -159,7 +167,7 @@ int main()
         sceneColor.aa = fxaaPass.addToGraph(fg, sceneColor.ldr);
 
         // Final composition pass
-        finalCompositionPass.compose(fg, blackboard, renderTarget);
+        finalCompositionPass.compose(fg, blackboard, renderTarget, settings);
 
         {
             VGFW_PROFILE_NAMED_SCOPE("Compile FrameGraph");
@@ -208,6 +216,18 @@ int main()
             ImGui::DragFloat3("Light Direction", glm::value_ptr(light.direction), 0.01f);
             ImGui::DragFloat("Light Intensity", &light.intensity, 0.5f, 0.0f, 100.0f);
             ImGui::ColorEdit3("Light Color", glm::value_ptr(light.color));
+
+            ImGui::Checkbox("Enable HBAO", &settings.enableHBAO);
+
+            if (settings.enableHBAO)
+            {
+                ImGui::DragFloat("HBAO radius", &hbaoProperties.radius, 0.005f, 0.0f, 100.0f);
+                ImGui::DragFloat("HBAO bias", &hbaoProperties.bias, 0.005f, 0.0f, 100.0f);
+                ImGui::DragFloat("HBAO intensity", &hbaoProperties.intensity, 0.005f, 0.0f, 100.0f);
+                ImGui::DragInt("HBAO maxRadiusPixels", &hbaoProperties.maxRadiusPixels, 1, 0, 1000);
+                ImGui::DragInt("HBAO stepCount", &hbaoProperties.stepCount, 1, 0, 32);
+                ImGui::DragInt("HBAO directionCount", &hbaoProperties.directionCount, 1, 0, 32);
+            }
 
             ImGui::SliderInt("LPV Iteration", &lpvIteration, 0, 200);
 

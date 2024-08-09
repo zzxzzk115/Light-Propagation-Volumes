@@ -28,7 +28,7 @@ HbaoPass::HbaoPass(vgfw::renderer::RenderContext& rc) : BasePass(rc)
 
 HbaoPass::~HbaoPass() { m_RenderContext.destroy(m_Pipeline).destroy(m_Noise); }
 
-void HbaoPass::addToGraph(FrameGraph& fg, FrameGraphBlackboard& blackboard)
+void HbaoPass::addToGraph(FrameGraph& fg, FrameGraphBlackboard& blackboard, const HBAOProperties& properties)
 {
     VGFW_PROFILE_FUNCTION
 
@@ -65,12 +65,13 @@ void HbaoPass::addToGraph(FrameGraph& fg, FrameGraphBlackboard& blackboard)
             const auto framebuffer = rc.beginRendering(renderingInfo);
             rc.bindGraphicsPipeline(m_Pipeline)
                 .bindUniformBuffer(0, vgfw::renderer::framegraph::getBuffer(resources, cameraUniform))
-                .setUniform1f("uHBAO_radius", 10.0)
-                .setUniform1f("uHBAO_bias", 0)
-                .setUniform1f("uHBAO_negInvRadius", 0)
-                .setUniform1i("uHBAO_maxRadiusPixels", 10)
-                .setUniform1i("uHBAO_stepCount", 4)
-                .setUniform1i("uHBAO_directionCount", 8)
+                .setUniform1f("uHBAO_radius", properties.radius)
+                .setUniform1f("uHBAO_bias", properties.bias)
+                .setUniform1f("uHBAO_intensity", properties.intensity)
+                .setUniform1f("uHBAO_negInvRadius2", -1.0 / (properties.radius * properties.radius))
+                .setUniform1i("uHBAO_maxRadiusPixels", properties.maxRadiusPixels)
+                .setUniform1i("uHBAO_stepCount", properties.stepCount)
+                .setUniform1i("uHBAO_directionCount", properties.directionCount)
                 .bindTexture(0, vgfw::renderer::framegraph::getTexture(resources, gBuffer.depth))
                 .bindTexture(1, vgfw::renderer::framegraph::getTexture(resources, gBuffer.normal))
                 .bindTexture(2, m_Noise)
@@ -87,9 +88,7 @@ void HbaoPass::generateNoiseTexture()
     std::random_device                    rd {};
     std::default_random_engine            g {rd()};
     std::vector<glm::vec3>                hbaoNoise;
-    std::generate_n(std::back_inserter(hbaoNoise), kSize * kSize, [&] {
-        return glm::vec3 {dist(g) * 2.0 - 1.0, dist(g) * 2.0 - 1.0, 0.0f};
-    });
+    std::generate_n(std::back_inserter(hbaoNoise), kSize * kSize, [&] { return glm::vec3 {dist(g), dist(g), 0.0f}; });
 
     m_Noise = m_RenderContext.createTexture2D({kSize, kSize}, vgfw::renderer::PixelFormat::eRGB16F);
     m_RenderContext

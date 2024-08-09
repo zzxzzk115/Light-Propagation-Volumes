@@ -39,6 +39,14 @@ uniform uint uVisualMode;
 uniform mat4 uLightVP;
 uniform RadianceInjection uInjection;
 
+struct Settings {
+    int enableHBAO;
+    int enableSSR;
+    int enableTAA;
+    int enableBloom;
+};
+uniform Settings uSettings;
+
 void main() {
     const float depth = getDepth(SceneDepth, vTexCoords);
     if (depth >= 1.0) discard;
@@ -50,7 +58,11 @@ void main() {
     vec4 metallicRoughnessAO = texture(gMetallicRoughnessAO, vTexCoords);
     float metallic = metallicRoughnessAO.r;
     float roughness = metallicRoughnessAO.g;
-    float ao = metallicRoughnessAO.b * texture(HBAO, vTexCoords).r;
+    float ao = metallicRoughnessAO.b;
+
+    if (uSettings.enableHBAO == 1) {
+        ao *= texture(HBAO, vTexCoords).r;
+    }
 
     // select cascade layer
     vec3 fragPosViewSpace = viewPositionFromDepth(depth, vTexCoords, uCamera.inverseProjection);
@@ -101,8 +113,10 @@ void main() {
 
     const vec3 radiance = max(LPV_Intensity * 4 / uInjection.gridCellSize / uInjection.gridCellSize, 0.0);
     if(uVisualMode != 1) {
-        Lo_Diffuse += baseColor * radiance * ao;
+        Lo_Diffuse += baseColor * radiance;
     }
+
+    Lo_Diffuse *= ao;
 
     if(uVisualMode != 2) {
         FragColor = Lo_Diffuse + Lo_Specular + emissive;

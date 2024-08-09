@@ -25,7 +25,10 @@ FinalCompositionPass::FinalCompositionPass(vgfw::renderer::RenderContext& rc) : 
 
 FinalCompositionPass::~FinalCompositionPass() { m_RenderContext.destroy(m_Pipeline); }
 
-void FinalCompositionPass::compose(FrameGraph& fg, FrameGraphBlackboard& blackboard, RenderTarget renderTarget)
+void FinalCompositionPass::compose(FrameGraph&           fg,
+                                   FrameGraphBlackboard& blackboard,
+                                   RenderTarget          renderTarget,
+                                   RenderSettings&       settings)
 {
     VGFW_PROFILE_FUNCTION
 
@@ -70,7 +73,10 @@ void FinalCompositionPass::compose(FrameGraph& fg, FrameGraphBlackboard& blackbo
             break;
 
         case RenderTarget::eHBAO:
-            output = blackboard.get<HBAOData>().hbao;
+            if (settings.enableHBAO)
+            {
+                output = blackboard.get<HBAOData>().hbao;
+            }
             break;
 
         case RenderTarget::eSceneColorHDR:
@@ -85,13 +91,21 @@ void FinalCompositionPass::compose(FrameGraph& fg, FrameGraphBlackboard& blackbo
     fg.addCallbackPass(
         "Final Composition Pass",
         [&](FrameGraph::Builder& builder, auto&) {
-            builder.read(output);
+            if (output != -1)
+            {
+                builder.read(output);
+            }
             builder.setSideEffect();
         },
         [=, this](const auto&, FrameGraphPassResources& resources, void* ctx) {
             NAMED_DEBUG_MARKER("Final Composition Pass");
             VGFW_PROFILE_GL("Final Composition Pass");
             VGFW_PROFILE_NAMED_SCOPE("Final Composition Pass");
+
+            if (output == -1)
+            {
+                return;
+            }
 
             const auto extent = resources.getDescriptor<vgfw::renderer::framegraph::FrameGraphTexture>(output).extent;
             auto&      rc     = *static_cast<vgfw::renderer::RenderContext*>(ctx);

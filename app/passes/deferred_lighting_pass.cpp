@@ -5,7 +5,6 @@
 #include "pass_resource/light_data.hpp"
 #include "pass_resource/radiance_data.hpp"
 #include "pass_resource/shadow_data.hpp"
-#include "vgfw.hpp"
 
 DeferredLightingPass::DeferredLightingPass(vgfw::renderer::RenderContext& rc) : BasePass(rc)
 {
@@ -33,7 +32,8 @@ FrameGraphResource DeferredLightingPass::addToGraph(FrameGraph&           fg,
                                                     FrameGraphBlackboard& blackboard,
                                                     const glm::mat4&      lightViewProjection,
                                                     const Grid3D&         grid,
-                                                    VisualMode            visualMode)
+                                                    VisualMode            visualMode,
+                                                    RenderSettings&       settings)
 {
     VGFW_PROFILE_FUNCTION
 
@@ -42,7 +42,12 @@ FrameGraphResource DeferredLightingPass::addToGraph(FrameGraph&           fg,
     const auto gBuffer         = blackboard.get<GBufferData>();
     const auto radianceData    = blackboard.get<RadianceData>();
     const auto shadowData      = blackboard.get<ShadowData>();
-    const auto hbaoData        = blackboard.get<HBAOData>();
+
+    HBAOData hbaoData {};
+    if (settings.enableHBAO)
+    {
+        hbaoData = blackboard.get<HBAOData>();
+    }
 
     const auto extent = fg.getDescriptor<vgfw::renderer::framegraph::FrameGraphTexture>(gBuffer.depth).extent;
 
@@ -71,7 +76,10 @@ FrameGraphResource DeferredLightingPass::addToGraph(FrameGraph&           fg,
             builder.read(shadowData.cascadedShadowMaps);
             builder.read(shadowData.cascadedUniformBuffer);
 
-            builder.read(hbaoData.hbao);
+            if (settings.enableHBAO)
+            {
+                builder.read(hbaoData.hbao);
+            }
 
             data.sceneColorHDR = builder.create<vgfw::renderer::framegraph::FrameGraphTexture>(
                 "SceneColorHDR", {.extent = extent, .format = vgfw::renderer::PixelFormat::eRGB16F});
@@ -103,6 +111,10 @@ FrameGraphResource DeferredLightingPass::addToGraph(FrameGraph&           fg,
                 .setUniformVec3("uInjection.gridSize", grid.size)
                 .setUniform1f("uInjection.gridCellSize", grid.cellSize)
                 .setUniformMat4("uLightVP", lightViewProjection)
+                .setUniform1i("uSettings.enableHBAO", settings.enableHBAO)
+                .setUniform1i("uSettings.enableSSR", settings.enableSSR)
+                .setUniform1i("uSettings.enableTAA", settings.enableTAA)
+                .setUniform1i("uSettings.enableBloom", settings.enableBloom)
                 .bindUniformBuffer(0, vgfw::renderer::framegraph::getBuffer(resources, cameraUniform))
                 .bindUniformBuffer(1, vgfw::renderer::framegraph::getBuffer(resources, lightUniform))
                 .bindUniformBuffer(2,
@@ -116,10 +128,14 @@ FrameGraphResource DeferredLightingPass::addToGraph(FrameGraph&           fg,
                 .bindTexture(6, vgfw::renderer::framegraph::getTexture(resources, shadowData.cascadedShadowMaps))
                 .bindTexture(7, vgfw::renderer::framegraph::getTexture(resources, radianceData.r))
                 .bindTexture(8, vgfw::renderer::framegraph::getTexture(resources, radianceData.g))
-                .bindTexture(9, vgfw::renderer::framegraph::getTexture(resources, radianceData.b))
-                .bindTexture(10, vgfw::renderer::framegraph::getTexture(resources, hbaoData.hbao))
-                .drawFullScreenTriangle()
-                .endRendering(framebuffer);
+                .bindTexture(9, vgfw::renderer::framegraph::getTexture(resources, radianceData.b));
+
+            if (settings.enableHBAO)
+            {
+                rc.bindTexture(10, vgfw::renderer::framegraph::getTexture(resources, hbaoData.hbao));
+            }
+
+            rc.drawFullScreenTriangle().endRendering(framebuffer);
         });
 
     return forwardLighting.sceneColorHDR;
