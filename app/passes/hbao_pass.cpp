@@ -42,7 +42,6 @@ void HbaoPass::addToGraph(FrameGraph& fg, FrameGraphBlackboard& blackboard, cons
         [&](FrameGraph::Builder& builder, HBAOData& data) {
             builder.read(cameraUniform);
             builder.read(gBuffer.depth);
-            builder.read(gBuffer.normal);
 
             data.hbao = builder.create<vgfw::renderer::framegraph::FrameGraphTexture>(
                 "HBAO Map", {.extent = extent, .format = vgfw::renderer::PixelFormat::eR8_UNorm});
@@ -73,8 +72,7 @@ void HbaoPass::addToGraph(FrameGraph& fg, FrameGraphBlackboard& blackboard, cons
                 .setUniform1i("uHBAO_stepCount", properties.stepCount)
                 .setUniform1i("uHBAO_directionCount", properties.directionCount)
                 .bindTexture(0, vgfw::renderer::framegraph::getTexture(resources, gBuffer.depth))
-                .bindTexture(1, vgfw::renderer::framegraph::getTexture(resources, gBuffer.normal))
-                .bindTexture(2, m_Noise)
+                .bindTexture(1, m_Noise)
                 .drawFullScreenTriangle()
                 .endRendering(framebuffer);
         });

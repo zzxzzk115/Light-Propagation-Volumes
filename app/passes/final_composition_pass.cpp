@@ -3,6 +3,8 @@
 #include "pass_resource/hbao_data.hpp"
 #include "pass_resource/reflective_shadow_map_data.hpp"
 #include "pass_resource/scene_color_data.hpp"
+#include "pass_resource/ssr_data.hpp"
+#include "vgfw.hpp"
 
 FinalCompositionPass::FinalCompositionPass(vgfw::renderer::RenderContext& rc) : BasePass(rc)
 {
@@ -25,16 +27,16 @@ FinalCompositionPass::FinalCompositionPass(vgfw::renderer::RenderContext& rc) : 
 
 FinalCompositionPass::~FinalCompositionPass() { m_RenderContext.destroy(m_Pipeline); }
 
-void FinalCompositionPass::compose(FrameGraph&           fg,
-                                   FrameGraphBlackboard& blackboard,
-                                   RenderTarget          renderTarget,
-                                   RenderSettings&       settings)
+void FinalCompositionPass::compose(FrameGraph& fg, FrameGraphBlackboard& blackboard, RenderSettings& settings)
 {
     VGFW_PROFILE_FUNCTION
 
     FrameGraphResource output {-1};
 
-    switch (renderTarget)
+    const auto defaultExtent =
+        fg.getDescriptor<vgfw::renderer::framegraph::FrameGraphTexture>(blackboard.get<SceneColorData>().hdr).extent;
+
+    switch (settings.renderTarget)
     {
         case RenderTarget::eFinal:
             output = blackboard.get<SceneColorData>().aa;
@@ -83,6 +85,13 @@ void FinalCompositionPass::compose(FrameGraph&           fg,
             output = blackboard.get<SceneColorData>().hdr;
             break;
 
+        case RenderTarget::eSSR:
+            if (settings.enableSSR)
+            {
+                output = blackboard.get<SSRData>().ssr;
+            }
+            break;
+
         case RenderTarget::eSceneColorLDR:
             output = blackboard.get<SceneColorData>().ldr;
             break;
@@ -102,17 +111,19 @@ void FinalCompositionPass::compose(FrameGraph&           fg,
             VGFW_PROFILE_GL("Final Composition Pass");
             VGFW_PROFILE_NAMED_SCOPE("Final Composition Pass");
 
-            if (output == -1)
-            {
-                return;
-            }
+            const auto extent =
+                output == -1 ? defaultExtent :
+                               resources.getDescriptor<vgfw::renderer::framegraph::FrameGraphTexture>(output).extent;
 
-            const auto extent = resources.getDescriptor<vgfw::renderer::framegraph::FrameGraphTexture>(output).extent;
-            auto&      rc     = *static_cast<vgfw::renderer::RenderContext*>(ctx);
+            auto& rc = *static_cast<vgfw::renderer::RenderContext*>(ctx);
 
             rc.beginRendering({.extent = extent}, glm::vec4 {0.0f});
-            rc.bindGraphicsPipeline(m_Pipeline)
-                .bindTexture(0, vgfw::renderer::framegraph::getTexture(resources, output))
-                .drawFullScreenTriangle();
+
+            if (output != -1)
+            {
+                rc.bindGraphicsPipeline(m_Pipeline)
+                    .bindTexture(0, vgfw::renderer::framegraph::getTexture(resources, output))
+                    .drawFullScreenTriangle();
+            }
         });
 }

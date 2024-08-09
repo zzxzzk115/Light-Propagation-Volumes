@@ -35,7 +35,6 @@ layout(binding = 8) uniform sampler3D Propagated_SH_G;
 layout(binding = 9) uniform sampler3D Propagated_SH_B;
 layout(binding = 10) uniform sampler2D HBAO;
 
-uniform uint uVisualMode;
 uniform mat4 uLightVP;
 uniform RadianceInjection uInjection;
 
@@ -44,6 +43,7 @@ struct Settings {
     int enableSSR;
     int enableTAA;
     int enableBloom;
+    uint visualMode;
 };
 uniform Settings uSettings;
 
@@ -112,13 +112,13 @@ void main() {
     const vec3 LPV_Intensity = vec3(dot(SH_Intensity, coeffs.red), dot(SH_Intensity, coeffs.green), dot(SH_Intensity, coeffs.blue));
 
     const vec3 radiance = max(LPV_Intensity * 4 / uInjection.gridCellSize / uInjection.gridCellSize, 0.0);
-    if(uVisualMode != 1) {
+    if(uSettings.visualMode != 1) {
         Lo_Diffuse += baseColor * radiance;
     }
 
     Lo_Diffuse *= ao;
 
-    if(uVisualMode != 2) {
+    if(uSettings.visualMode != 2) {
         FragColor = Lo_Diffuse + Lo_Specular + emissive;
     } else {
         FragColor = radiance;

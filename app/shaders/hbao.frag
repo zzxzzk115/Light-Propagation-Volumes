@@ -19,8 +19,7 @@ layout(binding = 0) uniform Camera {
 } uCamera;
 
 layout(binding = 0) uniform sampler2D gDepth;
-layout(binding = 1) uniform sampler2D gNormal;
-layout(binding = 2) uniform sampler2D NoiseMap;
+layout(binding = 1) uniform sampler2D NoiseMap;
 
 uniform float uHBAO_radius;
 uniform float uHBAO_bias;
@@ -58,8 +57,6 @@ void main() {
 
     const vec4 screenSize = vec4(gBufferSize.x, gBufferSize.y, 1.0 / gBufferSize.x, 1.0 / gBufferSize.y);
 
-    // vec3 N = normalize(texture(gNormal, vTexCoords).rgb);
-    // N = mat3(uCamera.view) * N;
     vec3 dpdx = dFdx(fragPosViewSpace);
     vec3 dpdy = dFdy(fragPosViewSpace);
     vec3 N = normalize(cross(dpdx, dpdy));

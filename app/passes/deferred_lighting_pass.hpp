@@ -4,7 +4,6 @@
 
 #include "grid3d.hpp"
 #include "render_settings.hpp"
-#include "visual_mode.hpp"
 
 class DeferredLightingPass : public BasePass
 {
@@ -16,7 +15,6 @@ public:
                                   FrameGraphBlackboard& blackboard,
                                   const glm::mat4&      lightViewProjection,
                                   const Grid3D&         grid,
-                                  VisualMode            visualMode,
                                   RenderSettings&       settings);
 
 private:

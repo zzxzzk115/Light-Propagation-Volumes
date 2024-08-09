@@ -32,7 +32,6 @@ FrameGraphResource DeferredLightingPass::addToGraph(FrameGraph&           fg,
                                                     FrameGraphBlackboard& blackboard,
                                                     const glm::mat4&      lightViewProjection,
                                                     const Grid3D&         grid,
-                                                    VisualMode            visualMode,
                                                     RenderSettings&       settings)
 {
     VGFW_PROFILE_FUNCTION
@@ -106,7 +105,6 @@ FrameGraphResource DeferredLightingPass::addToGraph(FrameGraph&           fg,
             const auto framebuffer = rc.beginRendering(renderingInfo);
 
             rc.bindGraphicsPipeline(m_Pipeline)
-                .setUniform1ui("uVisualMode", static_cast<uint32_t>(visualMode))
                 .setUniformVec3("uInjection.gridAABBMin", grid.aabb.min)
                 .setUniformVec3("uInjection.gridSize", grid.size)
                 .setUniform1f("uInjection.gridCellSize", grid.cellSize)
@@ -115,6 +113,7 @@ FrameGraphResource DeferredLightingPass::addToGraph(FrameGraph&           fg,
                 .setUniform1i("uSettings.enableSSR", settings.enableSSR)
                 .setUniform1i("uSettings.enableTAA", settings.enableTAA)
                 .setUniform1i("uSettings.enableBloom", settings.enableBloom)
+                .setUniform1ui("uSettings.visualMode", static_cast<uint32_t>(settings.visualMode))
                 .bindUniformBuffer(0, vgfw::renderer::framegraph::getBuffer(resources, cameraUniform))
                 .bindUniformBuffer(1, vgfw::renderer::framegraph::getBuffer(resources, lightUniform))
                 .bindUniformBuffer(2,

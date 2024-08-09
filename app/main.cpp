@@ -9,6 +9,8 @@
 #include "pass_resource/radiance_data.hpp"
 #include "pass_resource/reflective_shadow_map_data.hpp"
 #include "pass_resource/scene_color_data.hpp"
+#include "pass_resource/ssr_data.hpp"
+#include "passes/blit_pass.hpp"
 
 #include "passes/cascaded_shadow_map_pass.hpp"
 #include "passes/deferred_lighting_pass.hpp"
@@ -20,13 +22,12 @@
 #include "passes/radiance_injection_pass.hpp"
 #include "passes/radiance_propagation_pass.hpp"
 #include "passes/reflective_shadow_map_pass.hpp"
+#include "passes/ssr_pass.hpp"
 #include "passes/tonemapping_pass.hpp"
 
 #include "grid3d.hpp"
 #include "lpv_config.hpp"
 #include "render_settings.hpp"
-#include "render_target.hpp"
-#include "visual_mode.hpp"
 
 int main()
 {
@@ -80,20 +81,14 @@ int main()
     HbaoPass                hbaoPass(rc);
     GaussianBlurPass        gaussianBlurPass(rc);
     DeferredLightingPass    deferredLightingPass(rc);
+    SsrPass                 ssrPass(rc);
+    BlitPass                blitPass(rc);
     TonemappingPass         tonemappingPass(rc);
     FxaaPass                fxaaPass(rc);
     FinalCompositionPass    finalCompositionPass(rc);
 
-    // Define render target
-    RenderTarget renderTarget = RenderTarget::eFinal;
-
     // Get scene grid
     Grid3D sceneGrid {sponza.aabb};
-
-    // UI properties
-    VisualMode     visualMode   = VisualMode::eDefault;
-    int            lpvIteration = 12;
-    HBAOProperties hbaoProperties {};
 
     // Render settings
     RenderSettings settings {};
@@ -141,7 +136,7 @@ int main()
 
         // Radiance Propagation Pass
         std::optional<RadianceData> propagatedRadiance;
-        for (auto i = 0; i < lpvIteration; ++i)
+        for (auto i = 0; i < settings.lpvIteration; ++i)
             propagatedRadiance = radiancePropagationPass.addToGraph(
                 fg, propagatedRadiance ? *propagatedRadiance : radianceData, sceneGrid, i);
         blackboard.add<RadianceData>(propagatedRadiance ? *propagatedRadiance : radianceData);
@@ -156,7 +151,7 @@ int main()
         if (settings.enableHBAO)
         {
             // HBAO pass
-            hbaoPass.addToGraph(fg, blackboard, hbaoProperties);
+            hbaoPass.addToGraph(fg, blackboard, settings.hbaoProperties);
 
             // 2-pass Gaussian blur
             auto& hbao = blackboard.get<HBAOData>().hbao;
@@ -165,7 +160,15 @@ int main()
 
         // Deferred Lighting pass
         auto& sceneColor = blackboard.add<SceneColorData>();
-        sceneColor.hdr   = deferredLightingPass.addToGraph(fg, blackboard, rsmLightVP, sceneGrid, visualMode, settings);
+        sceneColor.hdr   = deferredLightingPass.addToGraph(fg, blackboard, rsmLightVP, sceneGrid, settings);
+
+        if (settings.enableSSR)
+        {
+            // SSR pass
+            const auto ssr = ssrPass.addToGraph(fg, blackboard, settings);
+            blackboard.add<SSRData>(ssr);
+            sceneColor.hdr = blitPass.addToGraph(fg, sceneColor.hdr, ssr);
+        }
 
         // Tone-mapping pass
         sceneColor.ldr = tonemappingPass.addToGraph(fg, sceneColor.hdr);
@@ -174,7 +177,7 @@ int main()
         sceneColor.aa = fxaaPass.addToGraph(fg, sceneColor.ldr);
 
         // Final composition pass
-        finalCompositionPass.compose(fg, blackboard, renderTarget, settings);
+        finalCompositionPass.compose(fg, blackboard, settings);
 
         {
             VGFW_PROFILE_NAMED_SCOPE("Compile FrameGraph");
@@ -228,15 +231,22 @@ int main()
 
             if (settings.enableHBAO)
             {
-                ImGui::DragFloat("HBAO radius", &hbaoProperties.radius, 0.005f, 0.0f, 100.0f);
-                ImGui::DragFloat("HBAO bias", &hbaoProperties.bias, 0.005f, 0.0f, 100.0f);
-                ImGui::DragFloat("HBAO intensity", &hbaoProperties.intensity, 0.005f, 0.0f, 100.0f);
-                ImGui::DragInt("HBAO maxRadiusPixels", &hbaoProperties.maxRadiusPixels, 1, 0, 1000);
-                ImGui::DragInt("HBAO stepCount", &hbaoProperties.stepCount, 1, 0, 32);
-                ImGui::DragInt("HBAO directionCount", &hbaoProperties.directionCount, 1, 0, 32);
+                ImGui::DragFloat("HBAO Radius", &settings.hbaoProperties.radius, 0.005f, 0.0f, 100.0f);
+                ImGui::DragFloat("HBAO Bias", &settings.hbaoProperties.bias, 0.005f, 0.0f, 100.0f);
+                ImGui::DragFloat("HBAO Intensity", &settings.hbaoProperties.intensity, 0.005f, 0.0f, 100.0f);
+                ImGui::DragInt("HBAO MaxRadiusPixels", &settings.hbaoProperties.maxRadiusPixels, 1, 0, 1000);
+                ImGui::DragInt("HBAO StepCount", &settings.hbaoProperties.stepCount, 1, 0, 32);
+                ImGui::DragInt("HBAO DirectionCount", &settings.hbaoProperties.directionCount, 1, 0, 32);
             }
 
-            ImGui::SliderInt("LPV Iteration", &lpvIteration, 0, 200);
+            ImGui::Checkbox("Enable SSR", &settings.enableSSR);
+
+            if (settings.enableSSR)
+            {
+                ImGui::DragFloat("Reflection Factor", &settings.reflectionFactor, 0.05f, 0.0f, 100.0f);
+            }
+
+            ImGui::SliderInt("LPV Iteration", &settings.lpvIteration, 0, 200);
 
             const char* visualModeItems[] = {
                 "Default",
@@ -244,11 +254,11 @@ int main()
                 "OnlyLPV",
             };
 
-            int currentVisualMode = static_cast<int>(visualMode);
+            int currentVisualMode = static_cast<int>(settings.visualMode);
 
             if (ImGui::Combo("Visual Mode", &currentVisualMode, visualModeItems, IM_ARRAYSIZE(visualModeItems)))
             {
-                visualMode = static_cast<VisualMode>(currentVisualMode);
+                settings.visualMode = static_cast<VisualMode>(currentVisualMode);
             }
 
             const char* renderTargetItems[] = {"Final",
@@ -262,13 +272,14 @@ int main()
                                                "G-MetallicRoughnessAO",
                                                "HBAO",
                                                "SceneColorHDR",
+                                               "SSR",
                                                "SceneColorLDR"};
 
-            int currentRenderTarget = static_cast<int>(renderTarget);
+            int currentRenderTarget = static_cast<int>(settings.renderTarget);
 
             if (ImGui::Combo("Render Target", &currentRenderTarget, renderTargetItems, IM_ARRAYSIZE(renderTargetItems)))
             {
-                renderTarget = static_cast<RenderTarget>(currentRenderTarget);
+                settings.renderTarget = static_cast<RenderTarget>(currentRenderTarget);
             }
 
             ImGui::End();
