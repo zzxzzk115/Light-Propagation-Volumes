@@ -1,14 +1,12 @@
 #version 460 core
 
 layout(location = 0) in vec2 vTexCoords;
-layout(location = 1) in vec3 vFragPos;
 layout(location = 2) in mat3 vTBN;
 
-layout(location = 0) out vec3 gPosition;
-layout(location = 1) out vec3 gNormal;
-layout(location = 2) out vec3 gAlbedo;
-layout(location = 3) out vec3 gEmissive;
-layout(location = 4) out vec3 gMetallicRoughnessAO;
+layout(location = 0) out vec3 gNormal;
+layout(location = 1) out vec3 gAlbedo;
+layout(location = 2) out vec3 gEmissive;
+layout(location = 3) out vec3 gMetallicRoughnessAO;
 
 layout(binding = 1) uniform PrimitiveMaterial {
     int baseColorTextureIndex;
@@ -58,7 +56,6 @@ void main() {
         emissive = texture(uTextures[uMaterial.emissiveTextureIndex], vTexCoords).rgb;
     }
 
-    gPosition = vFragPos;
     gNormal = normal;
     gAlbedo = baseColor;
     gEmissive = emissive;

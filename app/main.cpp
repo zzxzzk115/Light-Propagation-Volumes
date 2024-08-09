@@ -289,7 +289,6 @@ try
                                                "RSMPosition",
                                                "RSMNormal",
                                                "RSMFlux",
-                                               "G-Position",
                                                "G-Normal",
                                                "G-Albedo",
                                                "G-Emissive",

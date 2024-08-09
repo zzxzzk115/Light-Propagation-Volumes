@@ -24,17 +24,16 @@ layout(binding = 1) uniform DirectionalLight {
     vec3 color;
 } uLight;
 
-layout(binding = 0) uniform sampler2D gPosition;
-layout(binding = 1) uniform sampler2D gNormal;
-layout(binding = 2) uniform sampler2D gAlbedo;
-layout(binding = 3) uniform sampler2D gEmissive;
-layout(binding = 4) uniform sampler2D gMetallicRoughnessAO;
-layout(binding = 5) uniform sampler2D SceneDepth;
-layout(binding = 6) uniform sampler2DArrayShadow CascadedShadowMaps;
-layout(binding = 7) uniform sampler3D Propagated_SH_R;
-layout(binding = 8) uniform sampler3D Propagated_SH_G;
-layout(binding = 9) uniform sampler3D Propagated_SH_B;
-layout(binding = 10) uniform sampler2D HBAO;
+layout(binding = 0) uniform sampler2D gNormal;
+layout(binding = 1) uniform sampler2D gAlbedo;
+layout(binding = 2) uniform sampler2D gEmissive;
+layout(binding = 3) uniform sampler2D gMetallicRoughnessAO;
+layout(binding = 4) uniform sampler2D SceneDepth;
+layout(binding = 5) uniform sampler2DArrayShadow CascadedShadowMaps;
+layout(binding = 6) uniform sampler3D Propagated_SH_R;
+layout(binding = 7) uniform sampler3D Propagated_SH_G;
+layout(binding = 8) uniform sampler3D Propagated_SH_B;
+layout(binding = 9) uniform sampler2D HBAO;
 
 uniform mat4 uLightVP;
 uniform RadianceInjection uInjection;
@@ -51,8 +50,10 @@ uniform Settings uSettings;
 void main() {
     const float depth = getDepth(SceneDepth, vTexCoords);
     if (depth >= 1.0) discard;
+
+    vec3 fragPosViewSpace = viewPositionFromDepth(depth, vTexCoords, uCamera.inverseProjection);
     
-    vec3 fragPos = texture(gPosition, vTexCoords).rgb;
+    vec3 fragPos = (uCamera.inverseView * vec4(fragPosViewSpace, 1.0)).xyz;
     vec3 normal = texture(gNormal, vTexCoords).rgb;
     vec3 baseColor = texture(gAlbedo, vTexCoords).rgb;
     vec3 emissive = texture(gEmissive, vTexCoords).rgb;
@@ -66,7 +67,6 @@ void main() {
     }
 
     // select cascade layer
-    vec3 fragPosViewSpace = viewPositionFromDepth(depth, vTexCoords, uCamera.inverseProjection);
     uint cascadeIndex = selectCascadeIndex(fragPosViewSpace);
 
     // calculate shadow

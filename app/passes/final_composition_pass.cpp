@@ -61,10 +61,6 @@ void FinalCompositionPass::compose(FrameGraph& fg, FrameGraphBlackboard& blackbo
             output = blackboard.get<ReflectiveShadowMapData>().flux;
             break;
 
-        case RenderTarget::eGPosition:
-            output = blackboard.get<GBufferData>().position;
-            break;
-
         case RenderTarget::eGNormal:
             output = blackboard.get<GBufferData>().normal;
             break;

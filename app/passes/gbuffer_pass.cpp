@@ -17,10 +17,6 @@ void GBufferPass::addToGraph(FrameGraph&                                       f
         [&, resolution](FrameGraph::Builder& builder, GBufferData& data) {
             builder.read(cameraUniform);
 
-            data.position = builder.create<vgfw::renderer::framegraph::FrameGraphTexture>(
-                "Position", {.extent = resolution, .format = vgfw::renderer::PixelFormat::eRGB16F});
-            data.position = builder.write(data.position);
-
             data.normal = builder.create<vgfw::renderer::framegraph::FrameGraphTexture>(
                 "Normal", {.extent = resolution, .format = vgfw::renderer::PixelFormat::eRGB16F});
             data.normal = builder.write(data.normal);
@@ -55,8 +51,6 @@ void GBufferPass::addToGraph(FrameGraph&                                       f
                 .area = {.extent = resolution},
                 .colorAttachments =
                     {
-                        {.image      = vgfw::renderer::framegraph::getTexture(resources, data.position),
-                         .clearValue = kBlackColor},
                         {.image      = vgfw::renderer::framegraph::getTexture(resources, data.normal),
                          .clearValue = kBlackColor},
                         {.image      = vgfw::renderer::framegraph::getTexture(resources, data.albedo),

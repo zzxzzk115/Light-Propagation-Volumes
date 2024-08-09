@@ -58,7 +58,6 @@ void DeferredLightingPass::addToGraph(FrameGraph&           fg,
             builder.read(cameraUniform);
             builder.read(lightUniform);
 
-            builder.read(gBuffer.position);
             builder.read(gBuffer.normal);
             builder.read(gBuffer.albedo);
             builder.read(gBuffer.emissive);
@@ -126,20 +125,19 @@ void DeferredLightingPass::addToGraph(FrameGraph&           fg,
                 .bindUniformBuffer(1, vgfw::renderer::framegraph::getBuffer(resources, lightUniform))
                 .bindUniformBuffer(2,
                                    vgfw::renderer::framegraph::getBuffer(resources, shadowData.cascadedUniformBuffer))
-                .bindTexture(0, vgfw::renderer::framegraph::getTexture(resources, gBuffer.position))
-                .bindTexture(1, vgfw::renderer::framegraph::getTexture(resources, gBuffer.normal))
-                .bindTexture(2, vgfw::renderer::framegraph::getTexture(resources, gBuffer.albedo))
-                .bindTexture(3, vgfw::renderer::framegraph::getTexture(resources, gBuffer.emissive))
-                .bindTexture(4, vgfw::renderer::framegraph::getTexture(resources, gBuffer.metallicRoughnessAO))
-                .bindTexture(5, vgfw::renderer::framegraph::getTexture(resources, gBuffer.depth))
-                .bindTexture(6, vgfw::renderer::framegraph::getTexture(resources, shadowData.cascadedShadowMaps))
-                .bindTexture(7, vgfw::renderer::framegraph::getTexture(resources, radianceData.r))
-                .bindTexture(8, vgfw::renderer::framegraph::getTexture(resources, radianceData.g))
-                .bindTexture(9, vgfw::renderer::framegraph::getTexture(resources, radianceData.b));
+                .bindTexture(0, vgfw::renderer::framegraph::getTexture(resources, gBuffer.normal))
+                .bindTexture(1, vgfw::renderer::framegraph::getTexture(resources, gBuffer.albedo))
+                .bindTexture(2, vgfw::renderer::framegraph::getTexture(resources, gBuffer.emissive))
+                .bindTexture(3, vgfw::renderer::framegraph::getTexture(resources, gBuffer.metallicRoughnessAO))
+                .bindTexture(4, vgfw::renderer::framegraph::getTexture(resources, gBuffer.depth))
+                .bindTexture(5, vgfw::renderer::framegraph::getTexture(resources, shadowData.cascadedShadowMaps))
+                .bindTexture(6, vgfw::renderer::framegraph::getTexture(resources, radianceData.r))
+                .bindTexture(7, vgfw::renderer::framegraph::getTexture(resources, radianceData.g))
+                .bindTexture(8, vgfw::renderer::framegraph::getTexture(resources, radianceData.b));
 
             if (settings.enableHBAO)
             {
-                rc.bindTexture(10, vgfw::renderer::framegraph::getTexture(resources, hbaoData.hbao));
+                rc.bindTexture(9, vgfw::renderer::framegraph::getTexture(resources, hbaoData.hbao));
             }
 
             rc.drawFullScreenTriangle().endRendering(framebuffer);

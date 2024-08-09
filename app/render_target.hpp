@@ -6,7 +6,6 @@ enum class RenderTarget
     eRSMPosition,
     eRSMNormal,
     eRSMFlux,
-    eGPosition,
     eGNormal,
     eGAlbedo,
     eGEmissive,

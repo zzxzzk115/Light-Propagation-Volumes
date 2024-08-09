@@ -4,7 +4,6 @@
 
 struct GBufferData
 {
-    FrameGraphResource position;
     FrameGraphResource normal;
     FrameGraphResource albedo;
     FrameGraphResource emissive;
