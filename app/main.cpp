@@ -173,8 +173,11 @@ int main()
         // Tone-mapping pass
         sceneColor.ldr = tonemappingPass.addToGraph(fg, sceneColor.hdr);
 
-        // FXAA pass
-        sceneColor.aa = fxaaPass.addToGraph(fg, sceneColor.ldr);
+        if (settings.enableFXAA)
+        {
+            // FXAA pass
+            sceneColor.aa = fxaaPass.addToGraph(fg, sceneColor.ldr);
+        }
 
         // Final composition pass
         finalCompositionPass.compose(fg, blackboard, settings);
@@ -245,6 +248,8 @@ int main()
             {
                 ImGui::DragFloat("Reflection Factor", &settings.reflectionFactor, 0.05f, 0.0f, 100.0f);
             }
+
+            ImGui::Checkbox("Enable FXAA", &settings.enableFXAA);
 
             ImGui::SliderInt("LPV Iteration", &settings.lpvIteration, 0, 200);
 

@@ -39,7 +39,14 @@ void FinalCompositionPass::compose(FrameGraph& fg, FrameGraphBlackboard& blackbo
     switch (settings.renderTarget)
     {
         case RenderTarget::eFinal:
-            output = blackboard.get<SceneColorData>().aa;
+            if (settings.enableFXAA)
+            {
+                output = blackboard.get<SceneColorData>().aa;
+            }
+            else
+            {
+                output = blackboard.get<SceneColorData>().ldr;
+            }
             break;
 
         case RenderTarget::eRSMPosition:

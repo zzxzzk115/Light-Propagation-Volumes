@@ -111,7 +111,7 @@ FrameGraphResource DeferredLightingPass::addToGraph(FrameGraph&           fg,
                 .setUniformMat4("uLightVP", lightViewProjection)
                 .setUniform1i("uSettings.enableHBAO", settings.enableHBAO)
                 .setUniform1i("uSettings.enableSSR", settings.enableSSR)
-                .setUniform1i("uSettings.enableTAA", settings.enableTAA)
+                .setUniform1i("uSettings.enableFXAA", settings.enableFXAA)
                 .setUniform1i("uSettings.enableBloom", settings.enableBloom)
                 .setUniform1ui("uSettings.visualMode", static_cast<uint32_t>(settings.visualMode))
                 .bindUniformBuffer(0, vgfw::renderer::framegraph::getBuffer(resources, cameraUniform))

@@ -15,7 +15,7 @@ struct RenderSettings
     // Render features
     bool enableHBAO  = true;
     bool enableSSR   = true;
-    bool enableTAA   = true;
+    bool enableFXAA  = true;
     bool enableBloom = true;
 
     // LPV settings
