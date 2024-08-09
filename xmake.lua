@@ -31,12 +31,15 @@ rule("copy_assets")
     after_build(function (target)
         local asset_files = target:values("asset_files")
         if asset_files then
-            for _, file in ipairs(asset_files) do
-                local relpath = path.relative(file, os.projectdir())
-                local target_dir = path.join(target:targetdir(), path.directory(relpath))
-                os.mkdir(target_dir)
-                os.cp(file, target_dir)
-                print("Copying asset: " .. file .. " -> " .. target_dir)
+            for _, pattern in ipairs(asset_files) do
+                local files = os.files(pattern)
+                for _, file in ipairs(files) do
+                    local relpath = path.relative(file, os.projectdir())
+                    local target_dir = path.join(target:targetdir(), path.directory(relpath))
+                    os.mkdir(target_dir)
+                    os.cp(file, target_dir)
+                    print("Copying asset: " .. file .. " -> " .. target_dir)
+                end
             end
         end
     end)
