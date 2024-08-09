@@ -11,11 +11,11 @@ public:
     explicit DeferredLightingPass(vgfw::renderer::RenderContext& rc);
     ~DeferredLightingPass();
 
-    FrameGraphResource addToGraph(FrameGraph&           fg,
-                                  FrameGraphBlackboard& blackboard,
-                                  const glm::mat4&      lightViewProjection,
-                                  const Grid3D&         grid,
-                                  RenderSettings&       settings);
+    void addToGraph(FrameGraph&           fg,
+                    FrameGraphBlackboard& blackboard,
+                    const glm::mat4&      lightViewProjection,
+                    const Grid3D&         grid,
+                    RenderSettings&       settings);
 
 private:
     vgfw::renderer::GraphicsPipeline m_Pipeline;

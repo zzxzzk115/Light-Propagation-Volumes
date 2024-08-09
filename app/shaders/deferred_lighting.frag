@@ -7,7 +7,8 @@
 
 layout(location = 0) in vec2 vTexCoords;
 
-layout(location = 0) out vec3 FragColor;
+layout(location = 0) out vec3 SceneColor;
+layout(location = 1) out vec3 SceneColorBright;
 
 layout(binding = 0) uniform Camera {
     vec3 position;
@@ -119,8 +120,17 @@ void main() {
     Lo_Diffuse *= ao;
 
     if(uSettings.visualMode != 2) {
-        FragColor = Lo_Diffuse + Lo_Specular + emissive;
+        SceneColor = Lo_Diffuse + Lo_Specular + emissive;
     } else {
-        FragColor = radiance;
+        SceneColor = radiance;
+    }
+
+    if (SceneColor.r > 1.0 || SceneColor.g > 1.0 || SceneColor.b > 1.0)
+    {
+        SceneColorBright = SceneColor;
+    }
+    else
+    {
+        SceneColorBright = vec3(0);
     }
 }

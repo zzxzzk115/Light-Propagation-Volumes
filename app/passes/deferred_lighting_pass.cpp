@@ -4,6 +4,7 @@
 #include "pass_resource/hbao_data.hpp"
 #include "pass_resource/light_data.hpp"
 #include "pass_resource/radiance_data.hpp"
+#include "pass_resource/scene_color_data.hpp"
 #include "pass_resource/shadow_data.hpp"
 
 DeferredLightingPass::DeferredLightingPass(vgfw::renderer::RenderContext& rc) : BasePass(rc)
@@ -28,11 +29,11 @@ DeferredLightingPass::DeferredLightingPass(vgfw::renderer::RenderContext& rc) : 
 
 DeferredLightingPass::~DeferredLightingPass() { m_RenderContext.destroy(m_Pipeline); }
 
-FrameGraphResource DeferredLightingPass::addToGraph(FrameGraph&           fg,
-                                                    FrameGraphBlackboard& blackboard,
-                                                    const glm::mat4&      lightViewProjection,
-                                                    const Grid3D&         grid,
-                                                    RenderSettings&       settings)
+void DeferredLightingPass::addToGraph(FrameGraph&           fg,
+                                      FrameGraphBlackboard& blackboard,
+                                      const glm::mat4&      lightViewProjection,
+                                      const Grid3D&         grid,
+                                      RenderSettings&       settings)
 {
     VGFW_PROFILE_FUNCTION
 
@@ -50,13 +51,9 @@ FrameGraphResource DeferredLightingPass::addToGraph(FrameGraph&           fg,
 
     const auto extent = fg.getDescriptor<vgfw::renderer::framegraph::FrameGraphTexture>(gBuffer.depth).extent;
 
-    struct Data
-    {
-        FrameGraphResource sceneColorHDR;
-    };
-    const auto& forwardLighting = fg.addCallbackPass<Data>(
+    blackboard.add<SceneColorData>() = fg.addCallbackPass<SceneColorData>(
         "Deferred Lighting Pass",
-        [&](FrameGraph::Builder& builder, Data& data) {
+        [&](FrameGraph::Builder& builder, SceneColorData& data) {
             VGFW_PROFILE_NAMED_SCOPE("Deferred Lighting Pass Setup");
             builder.read(cameraUniform);
             builder.read(lightUniform);
@@ -80,11 +77,15 @@ FrameGraphResource DeferredLightingPass::addToGraph(FrameGraph&           fg,
                 builder.read(hbaoData.hbao);
             }
 
-            data.sceneColorHDR = builder.create<vgfw::renderer::framegraph::FrameGraphTexture>(
+            data.hdr = builder.create<vgfw::renderer::framegraph::FrameGraphTexture>(
                 "SceneColorHDR", {.extent = extent, .format = vgfw::renderer::PixelFormat::eRGB16F});
-            data.sceneColorHDR = builder.write(data.sceneColorHDR);
+            data.hdr = builder.write(data.hdr);
+
+            data.bright = builder.create<vgfw::renderer::framegraph::FrameGraphTexture>(
+                "SceneColorBright", {.extent = extent, .format = vgfw::renderer::PixelFormat::eRGB16F});
+            data.bright = builder.write(data.bright);
         },
-        [=, this](const Data& data, FrameGraphPassResources& resources, void* ctx) {
+        [=, this](const SceneColorData& data, FrameGraphPassResources& resources, void* ctx) {
             NAMED_DEBUG_MARKER("Deferred Lighting Pass");
             VGFW_PROFILE_GL("Deferred Lighting Pass");
             VGFW_PROFILE_NAMED_SCOPE("Deferred Lighting Pass");
@@ -95,11 +96,18 @@ FrameGraphResource DeferredLightingPass::addToGraph(FrameGraph&           fg,
             constexpr float     kFarPlane {1.0f};
 
             const vgfw::renderer::RenderingInfo renderingInfo {
-                .area             = {.extent = extent},
-                .colorAttachments = {{
-                    .image      = vgfw::renderer::framegraph::getTexture(resources, data.sceneColorHDR),
-                    .clearValue = kSceneBGColor,
-                }},
+                .area = {.extent = extent},
+                .colorAttachments =
+                    {
+                        {
+                            .image      = vgfw::renderer::framegraph::getTexture(resources, data.hdr),
+                            .clearValue = kSceneBGColor,
+                        },
+                        {
+                            .image      = vgfw::renderer::framegraph::getTexture(resources, data.bright),
+                            .clearValue = glm::vec4(0),
+                        },
+                    },
             };
 
             const auto framebuffer = rc.beginRendering(renderingInfo);
@@ -136,6 +144,4 @@ FrameGraphResource DeferredLightingPass::addToGraph(FrameGraph&           fg,
 
             rc.drawFullScreenTriangle().endRendering(framebuffer);
         });
-
-    return forwardLighting.sceneColorHDR;
 }

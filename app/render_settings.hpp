@@ -26,4 +26,7 @@ struct RenderSettings
 
     // SSR settings
     float reflectionFactor = 1.0f;
+
+    // Bloom settings
+    float bloomFactor = 0.2f;
 };

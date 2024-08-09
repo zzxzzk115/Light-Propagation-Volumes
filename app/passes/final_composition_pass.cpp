@@ -92,6 +92,10 @@ void FinalCompositionPass::compose(FrameGraph& fg, FrameGraphBlackboard& blackbo
             output = blackboard.get<SceneColorData>().hdr;
             break;
 
+        case RenderTarget::eSceneColorBright:
+            output = blackboard.get<SceneColorData>().bright;
+            break;
+
         case RenderTarget::eSSR:
             if (settings.enableSSR)
             {

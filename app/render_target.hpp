@@ -13,6 +13,7 @@ enum class RenderTarget
     eGMetallicRoughnessAO,
     eHBAO,
     eSceneColorHDR,
+    eSceneColorBright,
     eSSR,
     eSceneColorLDR,
 };

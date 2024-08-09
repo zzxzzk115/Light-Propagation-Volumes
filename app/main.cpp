@@ -11,6 +11,7 @@
 #include "pass_resource/scene_color_data.hpp"
 #include "pass_resource/ssr_data.hpp"
 #include "passes/blit_pass.hpp"
+#include "passes/bloom_pass.hpp"
 
 #include "passes/cascaded_shadow_map_pass.hpp"
 #include "passes/deferred_lighting_pass.hpp"
@@ -30,6 +31,7 @@
 #include "render_settings.hpp"
 
 int main()
+try
 {
     // Init VGFW
     if (!vgfw::init())
@@ -81,6 +83,7 @@ int main()
     HbaoPass                hbaoPass(rc);
     GaussianBlurPass        gaussianBlurPass(rc);
     DeferredLightingPass    deferredLightingPass(rc);
+    BloomPass               bloomPass(rc);
     SsrPass                 ssrPass(rc);
     BlitPass                blitPass(rc);
     TonemappingPass         tonemappingPass(rc);
@@ -159,8 +162,17 @@ int main()
         }
 
         // Deferred Lighting pass
-        auto& sceneColor = blackboard.add<SceneColorData>();
-        sceneColor.hdr   = deferredLightingPass.addToGraph(fg, blackboard, rsmLightVP, sceneGrid, settings);
+        deferredLightingPass.addToGraph(fg, blackboard, rsmLightVP, sceneGrid, settings);
+        auto& sceneColor = blackboard.get<SceneColorData>();
+
+        if (settings.enableBloom)
+        {
+            // Blur bright
+            sceneColor.bright = gaussianBlurPass.addToGraph(fg, sceneColor.bright, 1.0f);
+
+            // Bloom pass
+            sceneColor.hdr = bloomPass.addToGraph(fg, sceneColor.hdr, sceneColor.bright, settings.bloomFactor);
+        }
 
         if (settings.enableSSR)
         {
@@ -251,6 +263,13 @@ int main()
 
             ImGui::Checkbox("Enable FXAA", &settings.enableFXAA);
 
+            ImGui::Checkbox("Enable Bloom", &settings.enableBloom);
+
+            if (settings.enableBloom)
+            {
+                ImGui::DragFloat("Bloom Factor", &settings.bloomFactor, 0.001f, 0.0f, 5.0f);
+            }
+
             ImGui::SliderInt("LPV Iteration", &settings.lpvIteration, 0, 200);
 
             const char* visualModeItems[] = {
@@ -277,6 +296,7 @@ int main()
                                                "G-MetallicRoughnessAO",
                                                "HBAO",
                                                "SceneColorHDR",
+                                               "SceneColorBright",
                                                "SSR",
                                                "SceneColorLDR"};
 
@@ -301,4 +321,9 @@ int main()
     vgfw::shutdown();
 
     return 0;
+}
+catch (std::exception& e)
+{
+    std::cerr << e.what() << std::endl;
+    return -1;
 }
