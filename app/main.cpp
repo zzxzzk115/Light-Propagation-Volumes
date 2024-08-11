@@ -41,7 +41,7 @@ try
     }
 
     // Create a window instance
-    auto window = vgfw::window::create({.title = "Light Propagation Volumes"});
+    auto window = vgfw::window::create({.title = "Light Propagation Volumes", .width = 1920, .height = 1080});
 
     // Init renderer
     vgfw::renderer::init({.window = window});

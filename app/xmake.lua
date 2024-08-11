@@ -26,7 +26,7 @@ target("lpv-app")
     add_packages("vgfw", "tracy", "shaderc")
 
     -- add defines
-    add_defines("VGFW_ENABLE_TRACY", "VGFW_ENABLE_GL_DEBUG")
+    add_defines("VGFW_ENABLE_TRACY", "VGFW_ENABLE_GL_DEBUG") -- Comment this line to do the memory usage test.
 
     -- set target directory
     set_targetdir("$(buildir)/$(plat)/$(arch)/$(mode)/lpv-app")

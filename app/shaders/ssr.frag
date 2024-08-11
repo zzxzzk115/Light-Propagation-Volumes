@@ -4,7 +4,7 @@
 #include "lib/math.glsl"
 
 #define EPSILON 1e-4
-#define MAX_RAY_DISTANCE 1000
+#define MAX_RAY_DISTANCE 200
 
 layout(location = 0) in vec2 vTexCoords;
 layout(location = 0) out vec4 FragColor;
