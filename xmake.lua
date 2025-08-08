@@ -85,7 +85,7 @@ add_rules("plugin.vsxmake.autoupdate")
 add_rules("plugin.compile_commands.autoupdate", {outputdir = ".vscode"})
 
 -- add my own xmake-repo here
-add_repositories("my-xmake-repo https://github.com/zzxzzk115/xmake-repo.git dev")
+add_repositories("my-xmake-repo https://github.com/zzxzzk115/xmake-repo.git backup")
 
 -- if build application, then include application
 if has_config("app") then

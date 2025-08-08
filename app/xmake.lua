@@ -1,4 +1,5 @@
-add_requires("vgfw", "tracy")
+add_requires("vgfw")
+add_requires("tracy", {configs = {on_demand = true}})
 add_requires("shaderc", {configs = {binaryonly = true}}) -- use glslc binary to preprocess shaders
 
 -- target defination, name: lpv-app
