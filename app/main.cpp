@@ -45,6 +45,12 @@ try
 
     // Init renderer
     vgfw::renderer::init({.window = window});
+    if (!GLAD_GL_VERSION_4_6)
+    {
+        std::cerr << "LPV requires OpenGL 4.6" << std::endl;
+        vgfw::shutdown();
+        return -1;
+    }
 
     // Get render context
     auto& rc = vgfw::renderer::getRenderContext();

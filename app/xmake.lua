@@ -1,4 +1,4 @@
-add_requires("vgfw")
+add_requires("vgfw v1.2.0")
 add_requires("tracy", {configs = {on_demand = true}})
 add_requires("shaderc", {configs = {binaryonly = true}}) -- use glslc binary to preprocess shaders
 
