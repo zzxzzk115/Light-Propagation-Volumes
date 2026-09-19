@@ -41,7 +41,7 @@ try
     }
 
     // Create a window instance
-    auto window = vgfw::window::create({.title = "Light Propagation Volumes", .width = 1920, .height = 1080});
+    auto window = vgfw::window::create({.title = "Light Propagation Volumes", .width = 1920, .height = 1080, .isResizable = true});
 
     // Init renderer
     vgfw::renderer::init({.window = window});
@@ -114,6 +114,11 @@ try
         float dt = deltaTime.count();
 
         window->onTick();
+        if (window->isMinimized())
+        {
+            glfwWaitEventsTimeout(0.05);
+            continue;
+        }
 
         camera.update(window, dt);
 
@@ -153,7 +158,7 @@ try
         // GBuffer pass
         gBufferPass.addToGraph(fg,
                                blackboard,
-                               {.width = window->getWidth(), .height = window->getHeight()},
+                               {.width = window->getFramebufferWidth(), .height = window->getFramebufferHeight()},
                                camera,
                                sponza.meshPrimitives);
 
