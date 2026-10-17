@@ -1,5 +1,9 @@
 # Light-Propagation-Volumes
-Masters dissertation.
+Renderer developed for my MSc dissertation.
+
+## Dissertation
+
+[Read the MSc dissertation (PDF)](https://zzxzzk115.github.io/assets/pdf/LPV-MSc-Dissertation.pdf) — implementation, rendering results and performance evaluation. The PDF is hosted on my [project page](https://zzxzzk115.github.io/projects/light-propagation-volumes/).
 
 ![LPV-Final](./media/images/lpv_final1.png)
 ![LPV-Final2](./media/images/lpv_final2_6.png)
